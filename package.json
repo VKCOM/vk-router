@@ -1,0 +1,18 @@
+{
+  "name": "navigator",
+  "version": "1.0.0",
+  "description": "Навигационный модуль",
+  "main": "build/index.js",
+  "repository": "git@gitlab.mvk.com:k.zamotaev/navigator.git",
+  "author": "VK team",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "npx vkui-app-start --stylelint --eslint --ts",
+    "build": "npx vkui-app-build --stylelint --eslint --ts",
+    "test": "eslint ./src --ext .ts,.tsx && stylelint './src/**/*.css' && tsc --noEmit"
+  },
+  "dependencies": {
+    "@vkontakte-internal/vkui-common": "^7.14.1"
+  }
+}

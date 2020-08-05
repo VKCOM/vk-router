@@ -1,0 +1,8 @@
+{
+  "extends": ["@vkontakte/stylelint-config"],
+  "rules": {
+    "plugin/selector-bem-pattern": {
+      "implicitUtilities": ["styles.css"]
+    }
+  }
+}

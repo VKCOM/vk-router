@@ -13,6 +13,9 @@
     "test": "eslint ./src --ext .ts,.tsx && stylelint './src/**/*.css' && tsc --noEmit"
   },
   "dependencies": {
-    "@vkontakte-internal/vkui-common": "^7.14.1"
+    "@vkontakte-internal/vkui-common": "^7.14.1",
+    "router5": "^8.0.1",
+    "router5-plugin-browser": "^8.0.1",
+    "router5-plugin-persistent-params": "^8.0.1"
   }
 }

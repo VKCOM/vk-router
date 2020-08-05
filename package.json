@@ -4,18 +4,27 @@
   "description": "Навигационный модуль",
   "main": "build/index.js",
   "repository": "git@gitlab.mvk.com:k.zamotaev/navigator.git",
-  "author": "VK team",
-  "license": "MIT",
+  "author": "VK Team <https://vk.com/team>",
   "private": true,
   "scripts": {
-    "start": "npx vkui-app-start --stylelint --eslint --ts",
-    "build": "npx vkui-app-build --stylelint --eslint --ts",
-    "test": "eslint ./src --ext .ts,.tsx && stylelint './src/**/*.css' && tsc --noEmit"
+    "clear": "rm -rf lib",
+    "build": "yarn clear && rollup -c && yarn types",
+    "types": "tsc --emitDeclarationOnly",
+    "prepublishOnly": "yarn clear && yarn build",
+    "publish-package": "yarn install --check-files && yarn publish --non-interactive"
   },
-  "dependencies": {
-    "@vkontakte-internal/vkui-common": "^7.14.1",
-    "router5": "^8.0.1",
-    "router5-plugin-browser": "^8.0.1",
-    "router5-plugin-persistent-params": "^8.0.1"
+  "publishConfig": {
+    "registry": "https://artifactory.mvk.com/api/npm/npm-vkontakte/"
+  },  
+  "license": "MIT", 
+  "homepage": "https://github.com/VKCOM/vkjs#readme",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^8.4.0",
+    "@rollup/plugin-typescript": "^5.0.2",
+    "rollup": "^2.21.0",
+    "rollup-plugin-multi-input": "^1.1.1",
+    "rollup-plugin-terser": "^6.1.0",
+    "tslib": "^2.0.0",
+    "typescript": "^3.9.6"
   }
 }

@@ -1,30 +1,36 @@
-import React from 'react';
-import { Route, Router } from 'router5'; 
-import { getPanelData, panelsOrder } from '../routes';
-import { createRouter } from 'router5'; 
-import browserPlugin from 'router5-plugin-browser';
-import listenersPlugin from 'router5-plugin-listeners'
-import { querystring } from '@vkontakte-internal/vkui-common';
-import persistentParamsPlugin from 'router5-plugin-persistent-params';
+import React from 'react';   
+import { createRouterInstance, CreateRouterInstanceOptions } from './Router';
 import { NavigatorContextProps, NavigatorContext } from './Context';
+import { getPanelData } from './utils'; 
+ 
+export interface NavigatorProps {
+  routes: any[]
+  panelsOrder: any,
+} 
 
+export interface TransitionParams {
+  from?: string, 
+  to?: string, 
+  isBack?: string
+}
 
-export class Navigator extends React.PureComponent {
+export default class Navigator extends React.PureComponent<NavigatorProps> {
   public state: NavigatorContextProps = {
     router: null,
   };
 
-  public constructor(props) {
+  public constructor(props: NavigatorProps ) {
     super(props);
-    
-    const currentRoute = this.state.router.getState();
-    const currentPanel = getPanelData(currentRoute.name);
-
-    // @ts-ignore
-    this.state.router.addListener(this.onRouteChange);
-
+    const { routes } = this.props;
+    const options:CreateRouterInstanceOptions = {
+      routes
+    }
+    const router = createRouterInstance(options);
+    const currentRoute = router.getState();
+    const currentPanel = getPanelData(currentRoute.name, routes);
+  
     this.state = {
-      ...this.state,
+      router,
       onTransition: this.onTransition,
       onRootTransition: this.onRootTransition,
       activeView: currentPanel.view,
@@ -35,10 +41,12 @@ export class Navigator extends React.PureComponent {
         [currentPanel.view]: currentPanel.name,
       },
     };
+
+    this.state.router.addListener(this.onRouteChange);
   }
 
   private readonly onRouteChange = (newRoute: any, previousRoute:any) => {
-    const newRouteData = getPanelData(newRoute.name);
+    const newRouteData = getPanelData(newRoute.name, this.props.routes);
 
     this.setState({
       previousRoute: previousRoute,
@@ -50,9 +58,14 @@ export class Navigator extends React.PureComponent {
     });
   };
 
-  private readonly onTransition = ({ from, to, isBack }) => {
-    const history = [...this.state.history[this.state.activeView] || []];
-    const route = this.state.router.getState();
+  private readonly onTransition = ({ from, to, isBack }:TransitionParams) => {
+    const { activeView, history: prevHistory = {}, router} = this.state;
+    if(!activeView || !from || !to || !router){
+      return;
+    }
+
+    const history = [...prevHistory[activeView] || []];
+    const route = router.getState();
     const options = route.meta.source === 'popstate' ? {} : route.meta.options;
 
     if (!options.replace) {
@@ -67,33 +80,38 @@ export class Navigator extends React.PureComponent {
       params: isBack ? { ...route.params, [from]: {} } : route.params,
       [from]: isBack ? { loaded: false } : this.state[from],
       history: {
-        ...this.state.history,
-        [this.state.activeView]: history,
+        ...prevHistory,
+        [activeView]: history,
       },
     });
   };
 
-  private readonly onRootTransition = ({ from, to, isBack }) => {
-    const { history } = this.state;
+
+  private readonly onRootTransition = ({ from, to, isBack }:TransitionParams) => {
+    const { history: prevHistory = {}} = this.state;
+    const { panelsOrder } = this.props;
+    if(!from || !to){
+      return;
+    }
 
     if (isBack) {
       this.setState({
         history: {
-          ...history,
-          [to]: history[to] ? history[to] : [panelsOrder[to][0]],
+          ...prevHistory,
+          [to]: prevHistory[to] ? prevHistory[to] : [panelsOrder[to][0]],
           [from]: [panelsOrder[from][0]],
         },
       });
     } else {
       this.setState({
         history: {
-          ...history,
+          ...prevHistory,
           [to]: [panelsOrder[to][0]],
         },
       });
     }
   };
-
+  
   public render() {
     return <NavigatorContext.Provider value={ this.state }>
       { this.props.children }

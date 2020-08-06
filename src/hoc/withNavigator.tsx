@@ -2,7 +2,7 @@ import React from 'react';
 
 import { NavigatorContext } from '../Context';
 
-export function withNavigator(Component:any) {
+export function withNavigator(Component:any) { 
     return class _Navigator extends React.PureComponent {
       public static contextType = NavigatorContext;
   

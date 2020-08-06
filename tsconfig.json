@@ -1,21 +1,19 @@
 {
-  "compilerOptions": {
-    "module": "commonjs",
-    "target": "es5",
+  "compilerOptions": { 
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
     "jsx": "react",
-    "lib": ["es5", "es2015", "dom"],
+    "module": "es6",
+    "removeComments": true,
     "moduleResolution": "node",
     "noImplicitAny": true,
-    "removeComments": true,
+    "declaration": true,
+    "declarationDir": "./dist/types", 
     "preserveConstEnums": true,
-    "strictNullChecks": true,
-    "esModuleInterop": true,
-    "declaration": true, 
-    "declarationDir": "dist", 
-    "sourceMap": false,
-    "baseUrl": "src"
+    "target": "es5",
+    "rootDir": "src"
   },
-  "include": [
-    "src"
+  "exclude": [
+    "node_modules"
   ]
 }

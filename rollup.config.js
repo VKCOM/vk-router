@@ -1,13 +1,16 @@
 import typescript from '@rollup/plugin-typescript';
-import nodeResolve from '@rollup/plugin-node-resolve';
-import multiInput from 'rollup-plugin-multi-input';
 import { terser } from 'rollup-plugin-terser';
-
+import resolve from '@rollup/plugin-node-resolve';
 export default {
-  input: 'src/**/*.ts',
+  input: './src/index.ts',
   output: {
-    dir: 'dist',
-    format: 'cjs'
+    dir: './dist', 
+    format: 'cjs', 
   },
-  plugins: [nodeResolve(), typescript(), multiInput(), terser()],
-};
+  plugins: [ 
+    resolve(),
+    typescript(),
+    terser(),
+  ], 
+  external: ['react', 'react-dom', 'router5'],
+}

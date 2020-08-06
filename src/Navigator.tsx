@@ -1,23 +1,23 @@
 import React from 'react';   
 import { createRouterInstance, CreateRouterInstanceOptions } from './Router';
 import { NavigatorContextProps, NavigatorContext } from './Context';
-import { getPanelData } from './utils'; 
- 
+import { getPanelData } from './utils';   
+import { OnTransitionParams } from './interfaces'; 
+
 export interface NavigatorProps {
   routes: any[]
-  panelsOrder: any,
-} 
-
-export interface TransitionParams {
-  from?: string, 
-  to?: string, 
-  isBack?: string
-}
-
+  panels?: any[],
+  modals?: any[],
+  tooltips: any,
+  onNavigatorStateChange?: any,
+  config?: any,  
+  panelsOrder?: any
+}  
 export default class Navigator extends React.PureComponent<NavigatorProps> {
   public state: NavigatorContextProps = {
     router: null,
   };
+ 
 
   public constructor(props: NavigatorProps ) {
     super(props);
@@ -41,7 +41,7 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
         [currentPanel.view]: currentPanel.name,
       },
     };
-
+ 
     this.state.router.addListener(this.onRouteChange);
   }
 
@@ -58,7 +58,7 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     });
   };
 
-  private readonly onTransition = ({ from, to, isBack }:TransitionParams) => {
+  private readonly onTransition = ({ from, to, isBack }: OnTransitionParams) => {
     const { activeView, history: prevHistory = {}, router} = this.state;
     if(!activeView || !from || !to || !router){
       return;
@@ -86,8 +86,7 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     });
   };
 
-
-  private readonly onRootTransition = ({ from, to, isBack }:TransitionParams) => {
+  private readonly onRootTransition = ({ from, to, isBack }:OnTransitionParams) => {
     const { history: prevHistory = {}} = this.state;
     const { panelsOrder } = this.props;
     if(!from || !to){

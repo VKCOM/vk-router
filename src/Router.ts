@@ -1,31 +1,57 @@
+import { createRouter } from 'router5';
+import browserPlugin, {} from 'router5-plugin-browser';
+import listenersPlugin from 'router5-plugin-listeners' 
+import persistentParamsPlugin from 'router5-plugin-persistent-params';
 
-let query = querystring.parse(window.location.href);
 
-if (['desktop_web', 'mobile_web'].includes(query.vk_platform) && location.hash) {
-  query = {...query, ...querystring.parse(location.hash.replace('#', ''))};
+export interface PluginsParams {
+  browserPluginParams?: any,
+  listenersPluginParams?: any,
+  persistentPluginParams?: any,
 }
 
-if (query.vk_platform === 'desktop_web') {
-  query.is_desktop = 1;
+
+export interface CreateRouterInstanceOptions {
+  routes:any[],
+  defaultRoute?: any,
+  defaultParams?: any,
+  pluginsParams?: PluginsParams ,
+};
+
+export type CreateRouterInstance = (options: CreateRouterInstanceOptions) => any;
+
+const defaultPluginsParams: PluginsParams = {
+  browserPluginParams: {
+    base: '.',
+    useHash: true,
+  },
+  listenersPluginParams: null,
+  persistentPluginParams: null,
 }
 
-const defaultParams = query;
-
-if (history.state && history.state.params && history.state.params.modal) {
-  defaultParams.modal = history.state.params.modal;
-  defaultParams['modal-props'] = history.state.params['modal-props'];
-}
+export const createRouterInstance: CreateRouterInstance = ({
+  routes,
+  defaultRoute,
+  defaultParams,
+  pluginsParams = defaultPluginsParams,
+}) => {
+  const {
+    browserPluginParams,
+    listenersPluginParams,
+    persistentPluginParams,
+  } = pluginsParams; 
 
 const router = createRouter(routes, {
-  defaultRoute: PANEL_BROADCAST_MAIN,
+  defaultRoute,
   defaultParams,
 });
 
-router.usePlugin(browserPlugin({ base: '.', useHash: true }));
-router.usePlugin(listenersPlugin())
-router.usePlugin(persistentParamsPlugin(['owner_id']));
+router.usePlugin(browserPlugin(browserPluginParams));
+router.usePlugin(listenersPlugin(listenersPluginParams))
+router.usePlugin(persistentParamsPlugin(persistentPluginParams));
 router.start();
 
 router.navigate(router.getState().name, defaultParams, { replace: true });
-
-export default router;
+  return router;
+}
+export default createRouter;

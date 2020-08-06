@@ -1,12 +1,14 @@
 import React from 'react';
-
+import { Route } from 'router5';
+ 
 export interface NavigatorContextProps {
-    router?: Router;
+    [key:string]: any,
+    router?: any;
     previousRoute?: Route;
     activeView?: string;
     activePanels?: any;
-    onRootTransition?: (OnTransitionParams) => void;
-    onTransition?: (OnTransitionParams) => void;
+    onRootTransition?: (OnTransitionParams:any) => void;
+    onTransition?: (OnTransitionParams:any) => void;
     history?: Record<string, string[]>;
 }
   

@@ -2,7 +2,7 @@
   "name": "navigator",
   "version": "1.0.0",
   "description": "Навигационный модуль",
-  "main": "build/index.js",
+  "main": "dist/index.js",
   "repository": "git@gitlab.mvk.com:k.zamotaev/navigator.git",
   "author": "VK Team <https://vk.com/team>",
   "private": true,
@@ -15,8 +15,8 @@
   },
   "publishConfig": {
     "registry": "https://artifactory.mvk.com/api/npm/npm-vkontakte/"
-  },  
-  "license": "MIT", 
+  },
+  "license": "MIT",
   "homepage": "https://github.com/VKCOM/vkjs#readme",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^8.4.0",
@@ -26,5 +26,13 @@
     "rollup-plugin-terser": "^6.1.0",
     "tslib": "^2.0.0",
     "typescript": "^3.9.6"
+  },
+  "dependencies": {
+    "@types/react": "^16.9.44",
+    "react": "^16.13.1",
+    "router5": "^8.0.1",
+    "router5-plugin-browser": "^8.0.1",
+    "router5-plugin-listeners": "^8.0.1",
+    "router5-plugin-persistent-params": "^8.0.1"
   }
 }

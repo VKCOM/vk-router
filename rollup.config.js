@@ -6,7 +6,7 @@ import { terser } from 'rollup-plugin-terser';
 export default {
   input: 'src/**/*.ts',
   output: {
-    dir: 'lib',
+    dir: 'dist',
     format: 'cjs'
   },
   plugins: [nodeResolve(), typescript(), multiInput(), terser()],

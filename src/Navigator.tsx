@@ -1,37 +1,48 @@
 import React from 'react';   
 import { createRouterInstance, CreateRouterInstanceOptions } from './Router';
 import { NavigatorContextProps, NavigatorContext } from './Context';
-import { getPanelData } from './utils';   
-import { OnTransitionParams } from './interfaces'; 
+import { getPanelData, getRouteData, buildFakeHistory } from './utils';   
+import { OnTransitionParams, Go } from './interfaces'; 
+import { Route } from 'router5';
 
 export interface NavigatorProps {
-  routes: any[]
-  panels?: any[],
-  modals?: any[],
-  tooltips: any,
-  onNavigatorStateChange?: any,
+  routes: Route[]
+  panels?: string[],
+  modals?: string[], 
   config?: any,  
-  panelsOrder?: any
-}  
+  panelsOrder?: { [key:string]: string[] }
+}   
+   
 export default class Navigator extends React.PureComponent<NavigatorProps> {
-  public state: NavigatorContextProps = {
-    router: null,
-  };
- 
-
-  public constructor(props: NavigatorProps ) {
+  public state: NavigatorContextProps;
+  
+  public constructor(props: NavigatorProps) {
     super(props);
-    const { routes } = this.props;
+    const { routes, modals, panels, panelsOrder, config } = this.props;
+    
     const options:CreateRouterInstanceOptions = {
-      routes
+      routes, modals, panels, panelsOrder, config
     }
-    const router = createRouterInstance(options);
+
+    const router = createRouterInstance(options);  
+    router.addListener(this.onRouteChange);
+    router.start();
+    
     const currentRoute = router.getState();
     const currentPanel = getPanelData(currentRoute.name, routes);
-  
+      
+    const routeData = getRouteData(router.getState(), routes, panelsOrder);
+    
+    if (routeData.isModal) {
+      window.history.back();
+    }
+
     this.state = {
       router,
-      onTransition: this.onTransition,
+      go: this.go,
+      back: this.back,
+      close: this.close,
+      onTransition: this.onTransition, 
       onRootTransition: this.onRootTransition,
       activeView: currentPanel.view,
       history: {
@@ -39,78 +50,50 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
       },
       activePanels: {
         [currentPanel.view]: currentPanel.name,
-      },
+      }, 
+      activeModals:[],
     };
  
-    this.state.router.addListener(this.onRouteChange);
   }
 
   private readonly onRouteChange = (newRoute: any, previousRoute:any) => {
-    const newRouteData = getPanelData(newRoute.name, this.props.routes);
-
+    const newRouteData= getPanelData(newRoute.name, this.props.routes); 
+    const { only_page, ...routeParams } = newRoute.params;
+    const params = { ...this.state.params, [newRoute.name]: routeParams };
+     
     this.setState({
-      previousRoute: previousRoute,
+      previousRoute,
+      params,
       activeView: newRouteData.view,
       activePanels: {
         ...this.state.activePanels,
         [newRouteData.view]: newRouteData.name,
       },
-    });
-  };
-
-  private readonly onTransition = ({ from, to, isBack }: OnTransitionParams) => {
-    const { activeView, history: prevHistory = {}, router} = this.state;
-    if(!activeView || !from || !to || !router){
-      return;
-    }
-
-    const history = [...prevHistory[activeView] || []];
-    const route = router.getState();
-    const options = route.meta.source === 'popstate' ? {} : route.meta.options;
-
-    if (!options.replace) {
-      if (isBack) {
-        history.pop();
-      } else {
-        history.push(to);
+    }, ()=>{
+      if(!this.state.previousRoute){
+        const url  = window.location.toString();
+        buildFakeHistory(url);
       }
-    }
-
-    this.setState({
-      params: isBack ? { ...route.params, [from]: {} } : route.params,
-      [from]: isBack ? { loaded: false } : this.state[from],
-      history: {
-        ...prevHistory,
-        [activeView]: history,
-      },
     });
   };
+   
+  go: Go = (to, params, options) => {
+    const { router } = this.state;
+    const route = to || router.getState().name;
+    router.navigate(route, params, options);
+  };
 
-  private readonly onRootTransition = ({ from, to, isBack }:OnTransitionParams) => {
-    const { history: prevHistory = {}} = this.state;
-    const { panelsOrder } = this.props;
-    if(!from || !to){
-      return;
-    }
-
-    if (isBack) {
-      this.setState({
-        history: {
-          ...prevHistory,
-          [to]: prevHistory[to] ? prevHistory[to] : [panelsOrder[to][0]],
-          [from]: [panelsOrder[from][0]],
-        },
-      });
-    } else {
-      this.setState({
-        history: {
-          ...prevHistory,
-          [to]: [panelsOrder[to][0]],
-        },
-      });
+  close: VoidFunction = () => {
+    const { close } = this.props;
+    if(close){
+      close();
     }
   };
-  
+
+  back: VoidFunction = () => {
+    window.history.back();
+  };
+    
   public render() {
     return <NavigatorContext.Provider value={ this.state }>
       { this.props.children }

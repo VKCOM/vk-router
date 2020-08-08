@@ -1,21 +1,17 @@
-import { createRouter } from "router5";
+import { createRouter, Options } from "router5";
 import browserPlugin from "router5-plugin-browser";
-import listenersPlugin from "router5-plugin-listeners";
-import persistentParamsPlugin from "router5-plugin-persistent-params";
-import { getRouteData } from './utils';
+import listenersPlugin, { ListenersPluginOptions } from "router5-plugin-listeners";
+import persistentParamsPlugin from "router5-plugin-persistent-params"; 
+import { BrowserPluginOptions } from 'router5-plugin-browser/dist/types';
 
-export interface NavigatorConfig {
-  defaultRoute?: string,
-  base?: string,
-  useHash?: boolean,
-}
+export type NavigatorConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions;
 
 export interface CreateRouterInstanceOptions {
   routes: any[];
   config?: NavigatorConfig
   panelsOrder?:any,
-  modals?:any,
-  tooltips?:any,
+  panels?:any,
+  modals?:any, 
   views?: any,
 }
 
@@ -29,20 +25,22 @@ const defaultConfig: NavigatorConfig = {
 };
 
 export const createRouterInstance: CreateRouterInstance = ({
-  routes,
-  panelsOrder, 
+  routes, 
   config = defaultConfig,
 }) => {
   const {
-    defaultRoute
+    defaultRoute,
+    base,
+    useHash,
   } = config;
 
-  const defaultParams = {
-
+  const createRouterOptions: Partial<Options> = {
+    defaultRoute,
+    defaultParams: {}
   };
 
-  const browserPluginParams = {
-
+  const browserPluginParams: BrowserPluginOptions = {
+    
   };
 
   const listenersPluginParams = {
@@ -53,23 +51,13 @@ export const createRouterInstance: CreateRouterInstance = ({
 
   };
 
-  const router = createRouter(routes, {
-    defaultRoute,
-    defaultParams,
-  });
+  const router = createRouter(routes, createRouterOptions);
 
   
   router.usePlugin(browserPlugin(browserPluginParams));
   router.usePlugin(listenersPlugin(listenersPluginParams));
   router.usePlugin(persistentParamsPlugin(persistentPluginParams));
-  router.start();
-  // Временное решение проблемы с модалками и перезагрузкой страницы
-  const routeData = getRouteData(router.getState(), routes, panelsOrder);
-  if (routeData.isModal) {
-    window.history.back();
-  }
-  
-  //router.navigate(router.getState().name, defaultParams, { replace: true });
+   
   return router;
 };
 

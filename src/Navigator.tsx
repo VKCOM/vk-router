@@ -1,16 +1,13 @@
 import React from 'react';   
 import { createRouterInstance, CreateRouterInstanceOptions } from './Router';
 import { NavigatorContextProps, NavigatorContext } from './Context';
-import { getPanelData, getRouteData, buildFakeHistory } from './utils';   
-import { OnTransitionParams, Go } from './interfaces'; 
+import { buildFakeHistory } from './utils';   
+import { Go } from './interfaces'; 
 import { Route } from 'router5';
 
 export interface NavigatorProps {
-  routes: Route[]
-  panels?: string[],
-  modals?: string[], 
-  config?: any,  
-  panelsOrder?: { [key:string]: string[] }
+  routes: Route[],
+  config?: any,   
 }   
    
 export default class Navigator extends React.PureComponent<NavigatorProps> {
@@ -18,57 +15,47 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
   
   public constructor(props: NavigatorProps) {
     super(props);
-    const { routes, modals, panels, panelsOrder, config } = this.props;
+    const { routes, config } = this.props;
     
     const options:CreateRouterInstanceOptions = {
-      routes, modals, panels, panelsOrder, config
+      routes, config
     }
 
     const router = createRouterInstance(options);  
     router.addListener(this.onRouteChange);
     router.start();
     
-    const currentRoute = router.getState();
-    const currentPanel = getPanelData(currentRoute.name, routes);
-      
-    const routeData = getRouteData(router.getState(), routes, panelsOrder);
+    const currentRoute = router.getState(); 
+    const { onTransition, name, params} = currentRoute;
+    const history = {};
     
-    if (routeData.isModal) {
+    if (currentRoute.modal) {
       window.history.back();
-    }
+    } 
 
     this.state = {
       router,
+      route: name, 
       go: this.go,
       back: this.back,
-      close: this.close,
-      onTransition: this.onTransition, 
-      onRootTransition: this.onRootTransition,
-      activeView: currentPanel.view,
-      history: {
-        [currentPanel.view]: [currentPanel.name],
-      },
-      activePanels: {
-        [currentPanel.view]: currentPanel.name,
-      }, 
-      activeModals:[],
+      close: this.close,  
+      onTransition,
+      history,
+      params,  
     };
  
   }
 
-  private readonly onRouteChange = (newRoute: any, previousRoute:any) => {
-    const newRouteData= getPanelData(newRoute.name, this.props.routes); 
+  private readonly onRouteChange = (newRoute: any, previousRoute:any) => { 
     const { only_page, ...routeParams } = newRoute.params;
     const params = { ...this.state.params, [newRoute.name]: routeParams };
      
+
     this.setState({
       previousRoute,
+      route: newRoute,
       params,
-      activeView: newRouteData.view,
-      activePanels: {
-        ...this.state.activePanels,
-        [newRouteData.view]: newRouteData.name,
-      },
+      history,
     }, ()=>{
       if(!this.state.previousRoute){
         const url  = window.location.toString();

@@ -5,7 +5,7 @@ export const buildFakeHistory = (url: string) => {
   paths.forEach(path=>{
       pathstring+=`/${path}`;
       const url = `${origin}${pathstring}`;
-      history.pushState({}, path, url);
+      history.pushState(null, null, url);
       return url;
   });
 };

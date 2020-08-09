@@ -2,12 +2,11 @@ import React from 'react';
 import { createRouterInstance, CreateRouterInstanceOptions } from './Router';
 import { NavigatorContextProps, NavigatorContext } from './Context';
 import { buildFakeHistory } from './utils';   
-import { Go } from './interfaces'; 
-import { Route } from 'router5';
+import { Go, RouteDefinition } from './interfaces';
 
 export interface NavigatorProps {
-  routes: Route[],
-  config?: any,   
+  routes: RouteDefinition[],
+  config?: CreateRouterInstanceOptions,   
 }   
    
 export default class Navigator extends React.PureComponent<NavigatorProps> {
@@ -16,51 +15,45 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
   public constructor(props: NavigatorProps) {
     super(props);
     const { routes, config } = this.props;
+    const router = createRouterInstance({ routes, config });  
     
-    const options:CreateRouterInstanceOptions = {
-      routes, config
-    }
-
-    const router = createRouterInstance(options);  
     router.addListener(this.onRouteChange);
     router.start();
     
     const currentRoute = router.getState(); 
-    const { onTransition, name, params} = currentRoute;
+    const { onTransition, name, params, meta } = currentRoute;
+    const options = meta.options;
     const history = {};
-    
-    if (currentRoute.modal) {
-      window.history.back();
-    } 
+      
+    if(window.history.length <= 2){
+      const url  = window.location.toString();
+      buildFakeHistory(url);
+    }
 
     this.state = {
       router,
       route: name, 
       go: this.go,
-      back: this.back,
-      close: this.close,  
+      back: this.back,  
       onTransition,
       history,
       params,  
-    };
- 
+      options
+    }; 
   }
 
   private readonly onRouteChange = (newRoute: any, previousRoute:any) => { 
     const { only_page, ...routeParams } = newRoute.params;
     const params = { ...this.state.params, [newRoute.name]: routeParams };
-     
+    const options = newRoute.meta.source === 'popstate' ? {} : newRoute.meta.options;
+    const history = {};
 
     this.setState({
       previousRoute,
       route: newRoute,
       params,
+      options,
       history,
-    }, ()=>{
-      if(!this.state.previousRoute){
-        const url  = window.location.toString();
-        buildFakeHistory(url);
-      }
     });
   };
    
@@ -69,14 +62,7 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     const route = to || router.getState().name;
     router.navigate(route, params, options);
   };
-
-  close: VoidFunction = () => {
-    const { close } = this.props;
-    if(close){
-      close();
-    }
-  };
-
+  
   back: VoidFunction = () => {
     window.history.back();
   };

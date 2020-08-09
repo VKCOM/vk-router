@@ -3,12 +3,13 @@ import browserPlugin from "router5-plugin-browser";
 import listenersPlugin, { ListenersPluginOptions } from "router5-plugin-listeners";
 import persistentParamsPlugin from "router5-plugin-persistent-params"; 
 import { BrowserPluginOptions } from 'router5-plugin-browser/dist/types';
+import { RouteDefinition } from "./interfaces";
 
 export type NavigatorConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
 
 export interface CreateRouterInstanceOptions {
-  routes: any[];
-  config?: NavigatorConfig 
+  routes: RouteDefinition[];
+  config: NavigatorConfig 
 }
 
 export type CreateRouterInstance = (

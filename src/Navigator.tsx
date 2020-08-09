@@ -1,12 +1,12 @@
 import React from 'react';   
-import { createRouterInstance, CreateRouterInstanceOptions } from './Router';
+import { createRouterInstance, NavigatorConfig } from './Router';
 import { NavigatorContextProps, NavigatorContext } from './Context';
 import { buildFakeHistory } from './utils';   
 import { Go, RouteDefinition } from './interfaces';
 
 export interface NavigatorProps {
   routes: RouteDefinition[],
-  config?: CreateRouterInstanceOptions,   
+  config?: NavigatorConfig,   
 }   
    
 export default class Navigator extends React.PureComponent<NavigatorProps> {
@@ -21,13 +21,11 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     router.start();
     
     const currentRoute = router.getState(); 
-    const { onTransition, name, params, meta } = currentRoute;
+    const { name, params, meta } = currentRoute;
     const options = meta.options;
-    const history = {};
-      
-    if(window.history.length <= 2){
-      const url  = window.location.toString();
-      buildFakeHistory(url);
+    
+    if(window.history.length <= 2){ 
+      buildFakeHistory(window.location.toString());
     }
 
     this.state = {
@@ -35,8 +33,6 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
       route: name, 
       go: this.go,
       back: this.back,  
-      onTransition,
-      history,
       params,  
       options
     }; 
@@ -44,16 +40,13 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
 
   private readonly onRouteChange = (newRoute: any, previousRoute:any) => { 
     const { only_page, ...routeParams } = newRoute.params;
-    const params = { ...this.state.params, [newRoute.name]: routeParams };
-    const options = newRoute.meta.source === 'popstate' ? {} : newRoute.meta.options;
-    const history = {};
+    const params = { ...this.state.params, [newRoute.name]: routeParams }; 
+   
 
     this.setState({
       previousRoute,
-      route: newRoute,
-      params,
-      options,
-      history,
+      route: newRoute, 
+      params, 
     });
   };
    

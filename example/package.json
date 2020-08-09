@@ -1,0 +1,9 @@
+{
+  "name": "navigator-example-app",
+  "version": "1.0.0",
+  "description": "example of implementing navigator module",
+  "main": "dist/index.js",
+  "author": "VK team",
+  "license": "MIT",
+  "private": true
+}

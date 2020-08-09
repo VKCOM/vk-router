@@ -17,13 +17,11 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     const { routes, config } = this.props;
     const router = createRouterInstance({ routes, config });  
     
-    router.addListener(this.onRouteChange);
+    router.subscribe(this.onRouteChange);
     router.start();
     
     const currentRoute = router.getState(); 
-    const {  name, params, meta } = currentRoute;
-    const options = meta.options;
-    const history = {};
+   
       
     if(window.history.length <= 2){
       const url  = window.location.toString();
@@ -38,17 +36,10 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
   }
 
   private readonly onRouteChange = (newRoute: any, previousRoute:any) => { 
-    const { only_page, ...routeParams } = newRoute.params;
-    const params = { ...this.state.params, [newRoute.name]: routeParams };
-    const options = newRoute.meta.source === 'popstate' ? {} : newRoute.meta.options;
-    const history = {};
-
+ 
     this.setState({
       previousRoute,
-      route: newRoute,
-      params,
-      options,
-      history,
+      route: newRoute, 
     });
   };
    

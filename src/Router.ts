@@ -1,61 +1,168 @@
-import { createRouter, Options, Router } from "router5";
-import browserPlugin from "router5-plugin-browser";
-import listenersPlugin, { ListenersPluginOptions } from "router5-plugin-listeners";
-import persistentParamsPlugin from "router5-plugin-persistent-params"; 
-import { BrowserPluginOptions } from 'router5-plugin-browser/dist/types';
-
-export type NavigatorConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
-
-export interface CreateRouterInstanceOptions {
-  routes: any[];
-  config?: NavigatorConfig 
-}
-
-export type CreateRouterInstance = (
-  options: CreateRouterInstanceOptions
-) => Partial<Router>;
-
-const defaultConfig: NavigatorConfig = {    
-  base: ".",
-  useHash: true,  
-};
-
-export const createRouterInstance: CreateRouterInstance = ({
-  routes, 
-  config = defaultConfig,
-}) => {
-  const {
-    defaultRoute,
-    defaultParams,
-    base,
-    useHash,
-    persistentParams,
-  } = config;
-
-  const createRouterOptions: Partial<Options> = {
-    defaultRoute,
-    defaultParams,
-  };
-
-  const browserPluginParams: BrowserPluginOptions = {
-    base,
-    useHash,
-  };
-
-  const listenersPluginParams = {
-
-  };
  
 
-  const router = createRouter(routes, createRouterOptions);
+export type NavigatorConfig = Partial<RouterConfig>;
 
+export type CreateRouterInstanceOptions  = (
+  routes: any[],
+  config?: NavigatorConfig 
+)=> Router; 
+ 
+export type EncodeParams = () => string;
+
+export type DecodeParams = () => string[]; 
   
-  router.usePlugin(browserPlugin(browserPluginParams));
-  router.usePlugin(listenersPlugin(listenersPluginParams));
-  if(persistentParams && persistentParams.length){
-    router.usePlugin(persistentParamsPlugin(persistentParams));
-  } 
-  return router;
+export interface RouteDefinition {
+    name: string,
+    path: string,
+    encodeParams?: EncodeParams,
+    decodeParams?: DecodeParams, 
+    children?: RouteDefinition[],
+    params?: {[key: string]: any}
+    meta?: {[key: string]: any}
+}
+
+export interface RouterState {
+    disabled: boolean,
+    subscribers: any[],
+    currentRoute?:RouteDefinition,
+    history: string[],
+    params: {[key:string]: any},
+    options: {[key:string]: any},     
+    root: string, 
+}
+
+export interface Middleware {
+
+}
+
+export interface Middlewares {
+    [key: string]: Middleware
+}
+
+export interface RouterConfig {
+    base: string,
+    useHash?: boolean,
+    defaultRoute: string,
+    persistentParams?: string[],
+    routes: RouteDefinition[],
+    middlewares: Middlewares
+}
+
+type StateCallback = (state: {[key:string]: any}) => {[key:string]: any};
+
+type Go = (route: string, params: {[key:string]: any}, options: {[key:string]: any}) => void;
+
+const defaultRouterConfig = {}
+
+export class Router {
+
+    public state: RouterState = {
+        disabled: true,
+        subscribers: [],
+        history: [],
+        routes: [],
+        middlewares: [],
+        params: {},
+        options: {},     
+        root: '/'
+    };
+
+    constructor(params: RouterConfig){
+        //this.buildStateHistory();
+        //this.buildFakeHistory();
+
+        this.setState({
+            ...params
+        });
+    }
+ 
+    broadCastState = () =>{
+        const currentState = this.getState();
+        this.state.subscribers.forEach(subscriber=> subscriber(currentState));
+    }
+
+
+    public start = () => {
+        this.setState({disabled: false});
+    }
+
+    public stop = () => {
+        this.setState({disabled: true});
+    }
+
+    public subscribe = (subscriber: Function) =>{
+        //this.subscribers   
+    }
+
+    public unsubscribe = (subscriber: Function) =>{
+
+    }
+
+    public removeAllSubScribers = () =>{
+        this.setState({subscribers: []});
+    } 
+
+    private setRouterState = () =>{}
+
+    private matchUrl = ()=> {};
+    
+    private removeSlashes = () => {}
+
+    private buildPath = () =>{}
+
+    private buildStateHistory = () =>{}
+    
+    private buildFakeHistory = () =>{}
+
+    private buildUrl = () =>{}
+
+    private handleChildrenRoutes = () => {}
+
+    private handleRoutes = () =>{}
+
+    private calculateTransition = () => {}
+
+    private checkRouteExists = () =>{}
+
+    public getState = () =>{
+        return this.state;
+    }
+
+    private setState = (param: {[key:string]:any } | StateCallback) => {   
+        let newState = {};
+        if(typeof param === 'function') {
+            newState = param(this.state)
+          }
+          else {
+            newState = param;
+        }
+        this.state = {...this.state, ...newState};
+        this.buildUrl();
+    }
+
+    public add = (route: RouteDefinition) => {
+        this.setState({
+            routes: [...this.state.routes, route]
+        })
+    }
+
+    public remove = (route: RouteDefinition) => {}
+
+    public go:Go = (route, params, options) =>{        
+        if(this.checkRouteExists){
+            const {replace, ...restOptions} = options;
+            this.setState({
+                route: {...route, meta: {...restOptions}}, 
+            }) 
+        }
+    }
+    
+    public back = () =>{
+        window.history.back;
+    }
 };
 
-export default createRouter;
+export const createRouter: CreateRouter = (routes, config) =>{
+
+    return new Router(routes, config)
+}

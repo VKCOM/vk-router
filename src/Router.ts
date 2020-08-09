@@ -13,23 +13,26 @@ export type EncodeParams = () => string;
 
 export type DecodeParams = () => string[]; 
   
-export interface RouteDefinition {
+export interface Route {
+    [key:string]: any,
     name: string,
     path: string,
     encodeParams?: EncodeParams,
     decodeParams?: DecodeParams, 
-    children?: RouteDefinition[],
+    children?: Route[],
     params?: {[key: string]: any}
     meta?: {[key: string]: any}
 }
 
 export interface RouterState {
     disabled: boolean,
-    subscribers: any[],
-    currentRoute?:RouteDefinition,
+    subscribers: Function[],
+    currentRoute?: Route,
     history: string[],
-    params: {[key:string]: any},
-    options: {[key:string]: any},     
+    routes: Route[],
+    middlewares?: Middlewares,
+    params?: {[key:string]: any},
+    options?: {[key:string]: any},     
     root: string, 
 }
 
@@ -46,8 +49,8 @@ export interface RouterConfig {
     useHash?: boolean,
     defaultRoute: string,
     persistentParams?: string[],
-    routes: RouteDefinition[],
-    middlewares: Middlewares,    
+    routes?: Route[],
+    middlewares?: Middlewares,    
 }
 
 type StateCallback = (state: {[key:string]: any}) => {[key:string]: any};
@@ -62,8 +65,7 @@ export class Router {
         disabled: true,
         subscribers: [],
         history: [],
-        routes: [],
-        middlewares: [],
+        routes: [], 
         params: {},
         options: {},     
         root: '/'
@@ -121,7 +123,9 @@ export class Router {
       }
     }
 
-    private buildUrl = () =>{}
+    private buildUrl = () =>{
+      
+    };   
 
     private handleChildrenRoutes = () => {}
 
@@ -129,7 +133,10 @@ export class Router {
 
     private calculateTransition = () => {}
 
-    private checkRouteExists = () =>{}
+    private checkRouteExists = (route:Route) =>{
+
+      return true;
+    }
 
     public getState = () =>{
         return this.state;
@@ -156,11 +163,13 @@ export class Router {
     public remove = (route: RouteDefinition) => {}
 
     public go:Go = (route, params, options) =>{       
-        if(route && this.checkRouteExists(route)){
+        if(this.checkRouteExists(route)){
             const {replace, ...restOptions} = options;
-            this.setState({
+            if(replace){
+              this.setState({
                 route: {...route, meta: {...restOptions}}, 
-            }) 
+             }) 
+          }
         }
     }
     

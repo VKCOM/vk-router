@@ -21,32 +21,23 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     router.start();
     
     const currentRoute = router.getState(); 
-    const { name, params, meta } = currentRoute;
-    const options = meta.options;
-    
+
     if(window.history.length <= 2){ 
       buildFakeHistory(window.location.toString());
     }
 
     this.state = {
-      router,
-      route: name, 
+      currentRoute,
+      router, 
       go: this.go,
-      back: this.back,  
-      params,  
-      options
+      back: this.back,
     }; 
   }
 
-  private readonly onRouteChange = (newRoute: any, previousRoute:any) => { 
-    const { only_page, ...routeParams } = newRoute.params;
-    const params = { ...this.state.params, [newRoute.name]: routeParams }; 
-   
-
+  private readonly onRouteChange = (currentRoute: any, previousRoute:any) => {  
     this.setState({
       previousRoute,
-      route: newRoute, 
-      params, 
+      currentRoute, 
     });
   };
    

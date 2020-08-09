@@ -1,6 +1,5 @@
 import Navigator, { NavigatorProps } from './Navigator';
-import { NavigatorContextProps as WithNavigator } from './Context';
-import { withNavigator } from './hoc';
+import { withNavigator, WithNavigator } from './hoc';
 
 
 export {

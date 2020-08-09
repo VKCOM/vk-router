@@ -18,7 +18,7 @@ export type CreateRouterInstance = (
 
 const defaultConfig: NavigatorConfig = {    
   base: ".",
-  useHash: true,  
+  useHash: false,  
 };
 
 export const createRouterInstance: CreateRouterInstance = ({
@@ -31,6 +31,7 @@ export const createRouterInstance: CreateRouterInstance = ({
     base,
     useHash,
     persistentParams,
+    autoCleanUp,
   } = config;
 
   const createRouterOptions: Partial<Options> = {
@@ -44,7 +45,7 @@ export const createRouterInstance: CreateRouterInstance = ({
   };
 
   const listenersPluginParams = {
-
+    autoCleanUp
   };
  
 

@@ -1,4 +1,4 @@
-import { createRouter, Options, Router } from "router5";
+import { createRouter, Options } from "router5";
 import browserPlugin from "router5-plugin-browser";
 import listenersPlugin, { ListenersPluginOptions } from "router5-plugin-listeners";
 import persistentParamsPlugin from "router5-plugin-persistent-params"; 
@@ -8,13 +8,13 @@ import { RouteDefinition } from "./interfaces";
 export type NavigatorConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
 
 export interface CreateRouterInstanceOptions {
-  routes: RouteDefinition[];
+  routes: any[];
   config: NavigatorConfig 
 }
 
 export type CreateRouterInstance = (
   options: CreateRouterInstanceOptions
-) => Partial<Router>;
+) => any;
 
 const defaultConfig: NavigatorConfig = {    
   base: ".",

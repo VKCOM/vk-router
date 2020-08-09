@@ -1,9 +1,9 @@
 {
-  "name": "navigator-example-app",
+  "name": "education",
   "version": "1.0.0",
-  "description": "example of implementing navigator module",
-  "main": "dist/index.js",
-  "author": "VK team",
+  "main": "index.js",
+  "repository": "git@gitlab.mvk.com:vkui/education.git",
+  "author": "a.stambultsian <a.stambultsian@corp.vk.com>",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -18,9 +18,14 @@
     "@vkontakte/icons": "1.30.1",
     "@vkontakte/superappkit": "^1.1.1",
     "@vkontakte/vk-bridge": "^2.2.3",
-    "@vkontakte/vkui": "4.0.0-beta.8", 
+    "@vkontakte/vkui": "4.0.0-beta.8",
+    "autolinker": "3.14.1",
     "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "react-dom": "^16.13.1",
+    "router5": "^8.0.1",
+    "router5-plugin-browser": "^8.0.1",
+    "router5-plugin-listeners": "^8.0.1",
+    "router5-plugin-persistent-params": "^8.0.1"
   },
   "devDependencies": {
     "eslint-plugin-react-hooks": "^4.0.8",

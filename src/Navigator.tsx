@@ -21,7 +21,7 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     router.start();
     
     const currentRoute = router.getState(); 
-    const { onTransition, name, params, meta } = currentRoute;
+    const {  name, params, meta } = currentRoute;
     const options = meta.options;
     const history = {};
       
@@ -31,14 +31,9 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     }
 
     this.state = {
-      router,
-      route: name, 
+      currentRoute,
       go: this.go,
-      back: this.back,  
-      onTransition,
-      history,
-      params,  
-      options
+      back: this.back, 
     }; 
   }
 

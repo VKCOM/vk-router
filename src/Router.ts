@@ -1,5 +1,7 @@
  
 
+import { buildFakeHistory } from './utils';
+
 export type NavigatorConfig = Partial<RouterConfig>;
 
 export type CreateRouterInstanceOptions  = (
@@ -45,7 +47,7 @@ export interface RouterConfig {
     defaultRoute: string,
     persistentParams?: string[],
     routes: RouteDefinition[],
-    middlewares: Middlewares
+    middlewares: Middlewares,    
 }
 
 type StateCallback = (state: {[key:string]: any}) => {[key:string]: any};
@@ -83,11 +85,11 @@ export class Router {
 
 
     public start = () => {
-        this.setState({disabled: false});
+        this.setState({ disabled: false });
     }
 
     public stop = () => {
-        this.setState({disabled: true});
+        this.setState({ disabled: true });
     }
 
     public subscribe = (subscriber: Function) =>{
@@ -112,7 +114,12 @@ export class Router {
 
     private buildStateHistory = () =>{}
     
-    private buildFakeHistory = () =>{}
+    private buildFakeHistory = () =>{
+      if(window.history.length <= 2){
+        const url  = window.location.toString();
+        buildFakeHistory(url);
+      }
+    }
 
     private buildUrl = () =>{}
 
@@ -148,8 +155,8 @@ export class Router {
 
     public remove = (route: RouteDefinition) => {}
 
-    public go:Go = (route, params, options) =>{        
-        if(this.checkRouteExists){
+    public go:Go = (route, params, options) =>{       
+        if(route && this.checkRouteExists(route)){
             const {replace, ...restOptions} = options;
             this.setState({
                 route: {...route, meta: {...restOptions}}, 
@@ -162,7 +169,7 @@ export class Router {
     }
 };
 
-export const createRouter: CreateRouter = (routes, config) =>{
+export const createRouter: CreateRouterInstanceOptions = (routes, config) =>{
 
     return new Router(routes, config)
 }

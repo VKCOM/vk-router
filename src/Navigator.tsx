@@ -1,12 +1,11 @@
 import React from 'react';   
-import { createRouterInstance, CreateRouterInstanceOptions } from './Router';
-import { NavigatorContextProps, NavigatorContext } from './Context';
-import { buildFakeHistory } from './utils';   
+import { createRouter, RouterConfig } from './Router';
+import { NavigatorContextProps, NavigatorContext } from './Context';   
 import { Go, RouteDefinition } from './interfaces';
 
 export interface NavigatorProps {
   routes: RouteDefinition[],
-  config?: CreateRouterInstanceOptions,   
+  config?: RouterConfig,   
 }   
    
 export default class Navigator extends React.PureComponent<NavigatorProps> {
@@ -15,19 +14,13 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
   public constructor(props: NavigatorProps) {
     super(props);
     const { routes, config } = this.props;
-    const router = createRouterInstance({ routes, config });  
+    const router = createRouter(routes, config);  
     
     router.subscribe(this.onRouteChange);
     router.start();
     
     const currentRoute = router.getState(); 
-   
-      
-    if(window.history.length <= 2){
-      const url  = window.location.toString();
-      buildFakeHistory(url);
-    }
-
+     
     this.state = {
       currentRoute,
       go: this.go,

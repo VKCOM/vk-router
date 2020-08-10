@@ -1,8 +1,8 @@
 import React from 'react';   
-import { createRouterInstance, NavigatorConfig } from './Router';
+import { createRouterInstance, NavigatorConfig, RouteDefinition } from './Router';
 import { NavigatorContextProps, NavigatorContext } from './Context';
 import { buildFakeHistory } from './utils';   
-import { Go, RouteDefinition } from './interfaces';
+import { Go } from './interfaces';
 
 export interface NavigatorProps {
   routes: RouteDefinition[],
@@ -22,9 +22,7 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     
     const currentRoute = router.getState(); 
 
-    if(window.history.length <= 2){ 
-      buildFakeHistory(window.location.toString());
-    }
+    buildFakeHistory(); 
 
     this.state = {
       currentRoute,
@@ -34,10 +32,10 @@ export default class Navigator extends React.PureComponent<NavigatorProps> {
     }; 
   }
 
-  private readonly onRouteChange = (currentRoute: any, previousRoute:any) => {  
+  private readonly onRouteChange = (currentRoute: RouteDefinition, previousRoute:RouteDefinition) => {  
     this.setState({
       previousRoute,
-      currentRoute, 
+      currentRoute,
     });
   };
    

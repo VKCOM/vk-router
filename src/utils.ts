@@ -1,11 +1,13 @@
-export const buildFakeHistory = (url: string) => {
-  const { origin, pathname } = new URL(url);
-  const paths:string[] = pathname.split('/').filter(path => path);
-  let pathstring = '';
-  paths.forEach(path=>{
-      pathstring+=`/${path}`;
-      const urlRecord = `${origin}${pathstring}`;
-      history.pushState(null, null, urlRecord);
-      return url;
-  });
-};
+export const buildFakeHistory : VoidFunction = () => { 
+  if(window && window.history.length <= 2){ 
+    const { origin, hash, pathname } = window.location;
+    const hashMode = !!hash;
+    const address = hashMode ? hash.replace('#', '') : pathname; 
+    const paths = address.split('/').filter(path => path);
+    let pathstring = hashMode ? '#': '';
+    paths.forEach((path:string) => {
+        pathstring+=`/${path}`; 
+        history.pushState(null, null, `${origin}${pathstring}`);     
+    });
+  }
+}

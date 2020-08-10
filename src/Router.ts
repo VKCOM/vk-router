@@ -1,11 +1,12 @@
-import { createRouter, Options } from "router5";
+import { createRouter, Options, Route } from "router5";
 import browserPlugin from "router5-plugin-browser";
 import listenersPlugin, { ListenersPluginOptions } from "router5-plugin-listeners";
 import persistentParamsPlugin from "router5-plugin-persistent-params"; 
-import { BrowserPluginOptions } from 'router5-plugin-browser/dist/types';
-import { RouteDefinition } from "./interfaces";
+import { BrowserPluginOptions } from 'router5-plugin-browser/dist/types'; 
 
 export type NavigatorConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
+
+export type RouteDefinition = Route;
 
 export interface CreateRouterInstanceOptions {
   routes: any[];
@@ -48,10 +49,8 @@ export const createRouterInstance: CreateRouterInstance = ({
     autoCleanUp
   };
  
-
   const router = createRouter(routes, createRouterOptions);
 
-  
   router.usePlugin(browserPlugin(browserPluginParams));
   router.usePlugin(listenersPlugin(listenersPluginParams));
   if(persistentParams && persistentParams.length){

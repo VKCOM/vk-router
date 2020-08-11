@@ -1,10 +1,10 @@
-import Navigator, { NavigatorProps } from './Navigator';
+import { createNavigator } from './Navigator';
+import NavigatorProvider from './Provider';
 import { withNavigator, WithNavigator } from './hoc';
 
-
 export {
-    Navigator,
-    NavigatorProps,
+    createNavigator,
+    NavigatorProvider,
     withNavigator,
     WithNavigator,
 };

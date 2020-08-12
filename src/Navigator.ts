@@ -21,11 +21,6 @@ export interface NavigatorHistoryRecord {
   [key:string]: string
 }
 
-const defaultConfig: NavigatorConfig = {    
-  base: ".",
-  useHash: false,  
-};
-
 export interface NavigatorState {
     route: string,
     path: string,
@@ -48,6 +43,11 @@ export interface NavigatorRoute {
   params?:any,
   subRouteParams?:any
 }
+
+const defaultConfig: NavigatorConfig = {    
+  base: ".",
+  useHash: false,  
+};
  
 export default class Navigator {
 
@@ -96,7 +96,7 @@ export default class Navigator {
       const { origin, hash, pathname } = window.location;
       const hashMode = !!hash;
       const address = hashMode ? hash.replace('#', '') : pathname; 
-      const paths = address.split('/').filter(path => path);
+      const paths = address.split('/').filter((path: string) => path);
       
       let pathstring = hashMode ? '#': '';
       paths.forEach((path: string) => {
@@ -165,7 +165,7 @@ export default class Navigator {
     
   }
 
-  public go = (to:string, params?: any, options?:any) => {
+  public go = (to: string, params?: any, options?: any) => {
     const route = to || this.router.getState().name;
     this.router.navigate(route, params, options);
   }

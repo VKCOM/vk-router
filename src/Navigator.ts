@@ -121,8 +121,7 @@ export default class Navigator {
   }
 
   private syncNavigatorStateWithCore: CoreSubscribeFn = ({ route }) => {
-    const { name, params, path } = route; 
-    // const { name: prevName, path: prevPath, meta: prevMeta, params: prevCoreParams } = previousRoute;
+    const { name, params, path } = route;  
     const { history } = this.state;
    
     if(params.replace){

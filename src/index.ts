@@ -1,4 +1,4 @@
-import { createNavigator } from './Navigator';
+import { createNavigator, NavigatorState, CreateNavigatorOptions, } from './Navigator';
 import NavigatorProvider from './Provider';
 import { withNavigator, WithNavigator } from './hoc';
 

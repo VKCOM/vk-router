@@ -10,6 +10,7 @@
   "scripts": {
     "clear": "rm -rf dist",
     "build": "yarn clear && rollup -c",
+    "dev": "yarn clear && rollup -c -w",
     "prepublishOnly": "yarn clear && yarn build",
     "publish-package": "yarn install --check-files && yarn publish --non-interactive"
   },

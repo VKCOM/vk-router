@@ -4,6 +4,7 @@
     "forceConsistentCasingInFileNames": true,
     "jsx": "react",
     "module": "es6",
+    "sourceMap": true,
     "removeComments": true,
     "moduleResolution": "node",
     "noImplicitAny": true,

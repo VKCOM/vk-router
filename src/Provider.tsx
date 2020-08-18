@@ -1,5 +1,5 @@
 import React from 'react';   
-import { createNavigator, NavigatorState, CreateNavigatorOptions as NavigatorProps} from './Navigator';
+import { createNavigator, NavigatorState, CreateNavigatorOptions as NavigatorProps, NavigatorStatesToSubscriber } from './Navigator';
 import { NavigatorContext } from './Context';
  
 export default class Provider extends React.PureComponent<NavigatorProps> {
@@ -15,8 +15,9 @@ export default class Provider extends React.PureComponent<NavigatorProps> {
     this.state = {...initialState};
   }
 
-  private readonly onNavigatorChange = (state: NavigatorState) => {  
-    this.setState({...state});
+  private readonly onNavigatorChange = ({ toState }: NavigatorStatesToSubscriber) => {  
+    console.log('onNavigatorChange:::', toState);
+    this.setState({...toState});
   };
      
   public render() {

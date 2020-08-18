@@ -30,12 +30,12 @@ export const createRouterCore: CreateRouterCore = ({
     config
 }) => {
 const {
-    defaultRoute,
-    defaultParams,
-    base,
-    useHash,
-    persistentParams,
-    autoCleanUp,
+    defaultRoute = '/',
+    defaultParams = {},
+    base = '.',
+    useHash = false,
+    persistentParams = [],
+    autoCleanUp = false,
   } = config;
 
   const createRouterOptions: Partial<Options> = {
@@ -51,9 +51,8 @@ const {
   const listenersPluginParams: ListenersPluginOptions = {
     autoCleanUp
   };
- 
+  
   const router = createRouter(routes, createRouterOptions);
-
   router.usePlugin(browserPlugin(browserPluginParams));
   router.usePlugin(listenersPlugin(listenersPluginParams));
   router.usePlugin(persistentParamsPlugin(persistentParams));

@@ -8,8 +8,8 @@ export interface WithNavigator extends NavigatorState{
 export function withNavigator<T>(Component: React.ComponentType<T>) { 
     return class _Navigator extends React.PureComponent {
       public static contextType = NavigatorContext;
-  
-      public render() {
+      public render() { 
+     
         const props = {
           ...this.props,
           ...this.context,

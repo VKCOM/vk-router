@@ -1,6 +1,7 @@
+*.log
 node_modules/
 build_sourcemaps/
-build/
+dist/
 .idea/*.iws
 .idea/workspace.xml
 .idea/tasks.xml

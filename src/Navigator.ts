@@ -233,7 +233,7 @@ export class Navigator {
       ? prevRouteIsSubRoute 
         ? this.state.route : prevName
       : name;
-      
+
     const subRoute = isSubRoute ?  name : null;
     const subRouteParams = isSubRoute ? params : null;
     const routeParams = isSubRoute ? prevParams : params;
@@ -282,34 +282,7 @@ export class Navigator {
     
   }
 
-  private checkSubRoute = (to:string) =>{
-    let result = false;
-    const recursiveSearch = (routes: NavigatorRoute[]) => {
-      for(let i = 0, length = routes.length; i < length; ++i){
-          const route = routes[i];
-          if(route.subRoute && (route.path === to || route.name === to)){           
-            result = true;
-            break;
-          } else if(Array.isArray(route.children)){
-            recursiveSearch(route.children);
-          }
-      }
-    };
-
-    recursiveSearch(this.routes);
-    return result;
-  }
-
   public go = (to: string, params?: any, options: any = {}) => {
-
-    // if(this.checkSubRoute(to)){
-    //   /**
-    //    * Если subroute  = true
-    //    * Не обновлять url при открытии под роута если 
-    //    * не заменять параметры в текущем урле, если
-    //    */
-    //   this.router.replaceHistoryState(name, params)
-    // }
     this.router.navigate(to, params, options);
   }
  

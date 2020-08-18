@@ -223,10 +223,8 @@ export class Navigator {
      * route =  остается тем же самым
      * subroute = устанавливается в текущее значениe
      */
-    const prevRouteData = this.getRouteData(prevName);
     const routeData = this.getRouteData(name);
     const isSubRoute = routeData && routeData.subRoute;
-    const isPrevRouteSubRoute = prevRouteData && prevRouteData.subRoute;
     const route = isSubRoute ? prevName: name;
     const subRoute = isSubRoute ?  name : null;
     const subRouteParams = isSubRoute ? params : null;

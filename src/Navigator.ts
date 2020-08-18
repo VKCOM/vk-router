@@ -85,7 +85,7 @@ export class Navigator {
     }); 
                   
     this.router.subscribe(this.syncNavigatorStateWithCore); 
-    const initState = this.router.getState(); 
+    const initState = this.router.matchUrl(window.location.href); 
 
     if(initState){
       const { name: route, path, params } = initState;
@@ -101,7 +101,7 @@ export class Navigator {
           params,
           navigator: this,
       });
-    }
+    }  
     this.buildFakeHistory();
   } 
 
@@ -201,7 +201,7 @@ export class Navigator {
     const { name, params = {}, path, meta } = coreState;  
     const { name: prevName, params: prevParams = {} } = prevCoreState || {};
     const { history: prevHistory = [] } = this.state;
-
+    
     const history = [
       ...prevHistory,
     ] 
@@ -223,10 +223,11 @@ export class Navigator {
      * route =  остается тем же самым
      * subroute = устанавливается в текущее значениe
      */
-    
+    const prevRouteData = this.getRouteData(prevName);
     const routeData = this.getRouteData(name);
-    const isSubRoute = routeData && !!routeData.subRoute; 
-    const route = isSubRoute ? this.getParentRoute(name): name;
+    const isSubRoute = routeData && routeData.subRoute;
+    const isPrevRouteSubRoute = prevRouteData && prevRouteData.subRoute;
+    const route = isSubRoute ? prevName: name;
     const subRoute = isSubRoute ?  name : null;
     const subRouteParams = isSubRoute ? params : null;
     const routeParams = isSubRoute ? prevParams : params;
@@ -295,14 +296,14 @@ export class Navigator {
 
   public go = (to: string, params?: any, options: any = {}) => {
 
-    if(this.checkSubRoute(to)){
-      /**
-       * Если subroute  = true
-       * Не обновлять url при открытии под роута если 
-       * не заменять параметры в текущем урле, если
-       */
-      this.router.replaceHistoryState(name, params)
-    }
+    // if(this.checkSubRoute(to)){
+    //   /**
+    //    * Если subroute  = true
+    //    * Не обновлять url при открытии под роута если 
+    //    * не заменять параметры в текущем урле, если
+    //    */
+    //   this.router.replaceHistoryState(name, params)
+    // }
     this.router.navigate(to, params, options);
   }
  

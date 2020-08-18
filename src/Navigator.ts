@@ -85,15 +85,12 @@ export class Navigator {
     }); 
                   
     this.router.subscribe(this.syncNavigatorStateWithCore); 
-    const initState = this.router.getState(); 
-    //console.log('Core state', initState);
+    const initState = this.router.matchUrl(window.location.href); 
 
     if(initState){
       const { name: route, path, params } = initState;
       const history = [{ name, path, params }];
-
-      this.buildFakeHistory();
-      
+ 
       this.setState({
           route,
           path,
@@ -104,13 +101,14 @@ export class Navigator {
           params,
           navigator: this,
       });
-    }
+    }  
+    this.buildFakeHistory();
   } 
 
   private buildFakeHistory = () => {
 
     /**
-     *  Достраиваем историю в том случае если мы перешли нарпямую 
+     *  Достраиваем историю в том случае если мы перешли напрямую 
      *  достраиваем и в стек браузера и в стек истории модуля
      */
     const browserHistory = window.history;
@@ -124,6 +122,11 @@ export class Navigator {
       let pathstring = hashMode ? '#': '';
        
       paths.forEach((path: string) => {
+
+          /**
+           * 
+           */
+        
           const historyRecords: NavigatorHistoryRecord[] = 
             this.routes
                 .filter(({ path }:NavigatorRoute ) => path.includes(path))
@@ -131,7 +134,8 @@ export class Navigator {
 
           this.setState({ history: [...history, ...historyRecords] });
          
-          pathstring += `/${path}`;         
+          pathstring += `/${path}`;  
+          console.log(pathstring);       
           browserHistory.pushState(null, null, `${origin}${pathstring}`);
       });
     }
@@ -197,7 +201,7 @@ export class Navigator {
     const { name, params = {}, path, meta } = coreState;  
     const { name: prevName, params: prevParams = {} } = prevCoreState || {};
     const { history: prevHistory = [] } = this.state;
-
+    
     const history = [
       ...prevHistory,
     ] 
@@ -219,10 +223,9 @@ export class Navigator {
      * route =  остается тем же самым
      * subroute = устанавливается в текущее значениe
      */
-    
     const routeData = this.getRouteData(name);
-    const isSubRoute = routeData && !!routeData.subRoute; 
-    const route = isSubRoute ? this.getParentRoute(name): name;
+    const isSubRoute = routeData && routeData.subRoute;
+    const route = isSubRoute ? prevName: name;
     const subRoute = isSubRoute ?  name : null;
     const subRouteParams = isSubRoute ? params : null;
     const routeParams = isSubRoute ? prevParams : params;
@@ -245,7 +248,7 @@ export class Navigator {
   public subscribe=(subscriber: NavigatorSubscriber) => {
     if(!this.subscribers.includes(subscriber)){
       this.subscribers.push(subscriber);
-
+      this.broadCastState();
       return () => this.unsubscribe(subscriber);
     }
   } 
@@ -291,26 +294,19 @@ export class Navigator {
 
   public go = (to: string, params?: any, options: any = {}) => {
 
-    if(this.checkSubRoute(to)){
-      options.skipTransition = true;
-      /**
-       * Если subroute  = true
-       * Не обновлять url при открытии под роута если 
-       * не заменять параметры в текущем урле, если
-       */
-
-      this.router.replaceHistoryState(name, params)
-    }
-    this.router.replaceHistoryState(to, params);
+    // if(this.checkSubRoute(to)){
+    //   /**
+    //    * Если subroute  = true
+    //    * Не обновлять url при открытии под роута если 
+    //    * не заменять параметры в текущем урле, если
+    //    */
+    //   this.router.replaceHistoryState(name, params)
+    // }
     this.router.navigate(to, params, options);
   }
  
   public back: VoidFunction = () => {
-    const { history } = this.state;
-    const prevLocation = history[history.length - 2];
-    if(prevLocation){
-      this.go(prevLocation.name)
-    }
+    window.history.back;
   };
 
   public start = (params?: string | CoreRouterState) => {  

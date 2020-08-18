@@ -9,7 +9,7 @@ export type CreateNavigator = (
   options: CreateNavigatorOptions
 ) => Navigator;
 
-export interface NavigatorSubRoutes{
+export interface NavigatorSubRoutes {
   [key:string]: any,
 }
 
@@ -25,7 +25,6 @@ export interface NavigatorHistoryRecord {
 
 export interface NavigatorState {
     route?: string,
-    core?: CoreRouter,
     path?: string,
     subRoute?: string,
     previousRoute?: string,
@@ -48,9 +47,13 @@ export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;
 export interface NavigatorRoute {
   name: string,
   path: string,
-  subRoute?:string,
-  params?:any,
-  subouteParams?:any
+  subRoute?: boolean,
+  title?: string,
+  children?: NavigatorRoute[],
+}
+
+interface NavigatorRouteProperties{
+  [key:string]: any
 }
 
 const defaultConfig: NavigatorConfig = {    
@@ -58,14 +61,14 @@ const defaultConfig: NavigatorConfig = {
   defaultRoute: '/',
   useHash: false,  
 };
- 
+
 export class Navigator {
 
   public state: NavigatorState = {};
   public prevState: NavigatorState = {};
   
   public routes: NavigatorRoute[] = [];
-  public subRoutes: NavigatorSubRoutes = {};
+  public routeProperties: NavigatorRouteProperties = {};
   public config: NavigatorConfig = {};
   
 
@@ -76,14 +79,14 @@ export class Navigator {
     this.routes = routes;  
     this.config = config;
 
-    this.router = this.state.core = createRouterCore({
+    this.router = createRouterCore({
       routes: this.proccessRoutes(this.routes), 
       config: this.config
     }); 
                   
     this.router.subscribe(this.syncNavigatorStateWithCore); 
     const initState = this.router.getState(); 
-    console.log('Core state', initState);
+    //console.log('Core state', initState);
 
     if(initState){
       const { name: route, path, params } = initState;
@@ -134,7 +137,41 @@ export class Navigator {
     }
   }
 
-  private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => { 
+  /**
+   * Метод для обхода входящей коллекции роутов по заданному пути
+   * нужен, т.к. router5 не хранит внутри себя доп свойств
+   * TODO: найти более эффективный способ добираться до свойств
+   */
+  private getRouteData = (path:string): NavigatorRoute | null => {
+    const pathSegments = path.split('.');   
+    let routeData = null; 
+    let pathSegmentIndex = 0;
+    const target = pathSegments[pathSegments.length - 1];
+
+    const lookForSegment = (routes: NavigatorRoute[])=> {
+      for(let i = 0; i < routes.length; ++i){
+        const route = routes[i];
+        const pathName = pathSegments[pathSegmentIndex];
+        if(route.name === pathName){
+          if(route.name === target){
+            routeData = route;
+            break;
+          }         
+          if(Array.isArray(route.children)){
+            pathSegmentIndex +=1;
+            lookForSegment(route.children);
+          }
+          break;
+        }
+      };
+    };
+
+    lookForSegment(this.routes);
+
+    return routeData;
+  }
+
+  private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {
     return routes;
   }
 
@@ -150,9 +187,15 @@ export class Navigator {
     this.broadCastState();
   }
 
+  private getParentRoute = (path: string): string => {
+    const resultArr = path.split('.');
+    resultArr.pop();
+    return resultArr.length > 1 ? resultArr.join('.') : resultArr[0];
+  }
+
   private syncNavigatorStateWithCore: CoreSubscribeFn = ({ route: coreState, previousRoute: prevCoreState }) => {
-    const { name, params, path, meta } = coreState;  
-    const { name: prevName, params: prevParams } = prevCoreState;
+    const { name, params = {}, path, meta } = coreState;  
+    const { name: prevName, params: prevParams = {} } = prevCoreState || {};
     const { history: prevHistory = [] } = this.state;
 
     const history = [
@@ -174,15 +217,15 @@ export class Navigator {
      * Проверяем следующее состояние роутера
      * если следующий роут - это subroute текущего, то:
      * route =  остается тем же самым
-     * subroute = устанавливается в текущее значение
-     * 
-     * Неизвестно, хранятся ли параметры внутри объекта роута 
+     * subroute = устанавливается в текущее значениe
      */
-    const isSubRoute = !!meta.params.subRoute; 
-    const route = isSubRoute ? prevName: name;
-    const subRoute = isSubRoute ?  null : name;
+    
+    const routeData = this.getRouteData(name);
+    const isSubRoute = routeData && !!routeData.subRoute; 
+    const route = isSubRoute ? this.getParentRoute(name): name;
+    const subRoute = isSubRoute ?  name : null;
     const subRouteParams = isSubRoute ? params : null;
-    const routeParams = isSubRoute ? prevParams : prevParams;
+    const routeParams = isSubRoute ? prevParams : params;
 
     const navigatorState = {
       route,
@@ -193,7 +236,6 @@ export class Navigator {
     } 
 
     this.setState(navigatorState);
-    console.log('sync fired',  navigatorState);
   }
  
   public subscribe=(subscriber: NavigatorSubscriber) => {
@@ -225,15 +267,28 @@ export class Navigator {
     
   }
 
-  private checkIfSubRoute = (to:string) =>{
-    
-    return this.state.core
+  private checkSubRoute = (to:string) =>{
+    let result = false;
+    const recursiveSearch = (routes: NavigatorRoute[]) => {
+      for(let i = 0, length = routes.length; i < length; ++i){
+          const route = routes[i];
+          if(route.subRoute && (route.path === to || route.name === to)){           
+            result = true;
+            break;
+          } else if(Array.isArray(route.children)){
+            recursiveSearch(route.children);
+          }
+      }
+    };
+
+    recursiveSearch(this.routes);
+    return result;
   }
 
-  public go = (to: string, params?: any, options?: any) => {
-     
-    if(this.checkIfSubRoute(to)){
-      options.replace = true;
+  public go = (to: string, params?: any, options: any = {}) => {
+
+    if(this.checkSubRoute(to)){
+      options.skipTransition = true;
       /**
        * Если subroute  = true
        * Не обновлять url при открытии под роута если 

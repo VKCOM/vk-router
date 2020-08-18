@@ -202,7 +202,7 @@ export class Navigator {
       ...prevHistory,
     ] 
  
-    //Вхождение в историю одинаковое для route и  subroute
+    //Вхождение в историю роутера одинаковое для route и  subroute
 
     if(params.replace){
       history.pop();
@@ -226,6 +226,10 @@ export class Navigator {
     const subRoute = isSubRoute ?  name : null;
     const subRouteParams = isSubRoute ? params : null;
     const routeParams = isSubRoute ? prevParams : params;
+    
+    if(isSubRoute){
+      this.router.replaceHistoryState(route, routeParams);
+    }
 
     const navigatorState = {
       route,
@@ -294,8 +298,10 @@ export class Navigator {
        * Не обновлять url при открытии под роута если 
        * не заменять параметры в текущем урле, если
        */
+
+      this.router.replaceHistoryState(name, params)
     }
-    
+    this.router.replaceHistoryState(to, params);
     this.router.navigate(to, params, options);
   }
  

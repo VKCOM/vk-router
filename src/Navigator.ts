@@ -245,7 +245,7 @@ export class Navigator {
   public subscribe=(subscriber: NavigatorSubscriber) => {
     if(!this.subscribers.includes(subscriber)){
       this.subscribers.push(subscriber);
-
+      this.broadCastState();
       return () => this.unsubscribe(subscriber);
     }
   } 
@@ -303,11 +303,7 @@ export class Navigator {
   }
  
   public back: VoidFunction = () => {
-    const { history } = this.state;
-    const prevLocation = history[history.length - 2];
-    if(prevLocation){
-      this.go(prevLocation.name)
-    }
+    window.history.back;
   };
 
   public start = (params?: string | CoreRouterState) => {  

@@ -86,14 +86,11 @@ export class Navigator {
                   
     this.router.subscribe(this.syncNavigatorStateWithCore); 
     const initState = this.router.getState(); 
-    //console.log('Core state', initState);
 
     if(initState){
       const { name: route, path, params } = initState;
       const history = [{ name, path, params }];
-
-      this.buildFakeHistory();
-      
+ 
       this.setState({
           route,
           path,
@@ -105,12 +102,13 @@ export class Navigator {
           navigator: this,
       });
     }
+    this.buildFakeHistory();
   } 
 
   private buildFakeHistory = () => {
 
     /**
-     *  Достраиваем историю в том случае если мы перешли нарпямую 
+     *  Достраиваем историю в том случае если мы перешли напрямую 
      *  достраиваем и в стек браузера и в стек истории модуля
      */
     const browserHistory = window.history;
@@ -124,6 +122,11 @@ export class Navigator {
       let pathstring = hashMode ? '#': '';
        
       paths.forEach((path: string) => {
+
+          /**
+           * 
+           */
+        
           const historyRecords: NavigatorHistoryRecord[] = 
             this.routes
                 .filter(({ path }:NavigatorRoute ) => path.includes(path))
@@ -131,7 +134,8 @@ export class Navigator {
 
           this.setState({ history: [...history, ...historyRecords] });
          
-          pathstring += `/${path}`;         
+          pathstring += `/${path}`;  
+          console.log(pathstring);       
           browserHistory.pushState(null, null, `${origin}${pathstring}`);
       });
     }

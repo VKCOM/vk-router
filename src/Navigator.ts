@@ -292,16 +292,13 @@ export class Navigator {
   public go = (to: string, params?: any, options: any = {}) => {
 
     if(this.checkSubRoute(to)){
-      options.skipTransition = true;
       /**
        * Если subroute  = true
        * Не обновлять url при открытии под роута если 
        * не заменять параметры в текущем урле, если
        */
-
       this.router.replaceHistoryState(name, params)
     }
-    this.router.replaceHistoryState(to, params);
     this.router.navigate(to, params, options);
   }
  

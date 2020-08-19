@@ -18,16 +18,17 @@ export interface NavigatorParams {
 } 
 
 export interface NavigatorHistoryRecord {
-    name: string,
-    path: string,
-    params? : { [key: string]: any }
+  route?: string,
+  subRoute?: string,
+  path?: string,
+  subRouteParams?: NavigatorParams,     
+  params? : NavigatorParams
 }
 
 export interface NavigatorState {
     route?: string,
     path?: string,
     subRoute?: string,
-    previousRoute?: string,
     history?: NavigatorHistoryRecord[],
     go?: Function,
     back?: VoidFunction,
@@ -89,7 +90,7 @@ export class Navigator {
 
     if(initState){
       const { name: route, path, params } = initState;
-      const history = [{ name, path, params }];
+      const history = [{ route: name, path, params }];
  
       this.setState({
           route,
@@ -103,7 +104,46 @@ export class Navigator {
       });
     }  
     this.buildFakeHistory();
+    this.handlePopStateEvent();
   } 
+
+  private handlePopStateEvent  = () =>{
+    window.addEventListener('popstate', () => {
+      const { route } = this.state;
+      const { route: prevRoute } = this.prevState;
+      const { history: prevHistory = [] } = this.state;
+      
+      const history = [
+       ...prevHistory,
+      ] 
+
+      const prevHistoryState = history[history.length - 1];
+      let state = {...this.state};
+       
+      if(route && prevRoute && route === prevRoute){
+        history.pop();
+        const prevHistoryState = history[history.length - 1];
+        console.log('popstate', route, '--',prevRoute, '---', prevHistoryState.route);
+      
+        // if(prevRoute !== prevHistoryState.route){
+        //   state = prevHistoryState;
+        //   console.log('returned to modal', prevHistoryState, history);
+        // }
+      }
+
+      this.setState({ ...state, history });
+      // let navigatorState = {};
+      // if(route === prevRoute 
+      //   && prevHistoryState.route !== route 
+      //   && !!prevHistoryState.subRoute
+      //   )
+      // {
+      //   history.pop();
+      //   navigatorState = {...prevHistoryState, history};
+      //   this.setState(navigatorState);
+      // } 
+    })
+  }
 
   private buildFakeHistory = () => {
 
@@ -130,7 +170,7 @@ export class Navigator {
           const historyRecords: NavigatorHistoryRecord[] = 
             this.routes
                 .filter(({ path }:NavigatorRoute ) => path.includes(path))
-                .map(({name, path}: NavigatorRoute ) => ({ name, path }));
+                .map(({name, path}: NavigatorRoute ) => ({ route: name, path }));
 
           this.setState({ history: [...history, ...historyRecords] });
          
@@ -206,17 +246,7 @@ export class Navigator {
       ...prevHistory,
     ] 
  
-    //Вхождение в историю роутера одинаковое для route и  subroute
-
-    if(params.replace){
-      history.pop();
-    } else {
-      history.push({
-        name,
-        path,
-        params,
-      });
-    }
+  
     /**
      * Проверяем следующее состояние роутера
      * если следующий роут - это subroute текущего, то:
@@ -225,6 +255,8 @@ export class Navigator {
      * если предыдущий роут - тоже subrout
      * то оставляем текущий роут
      */
+
+    const prevHistoryState = history[history.length - 1];
     
     const routeData = this.getRouteData(name);
     const prevRouteIsSubRoute = this.state.subRoute === prevName; 
@@ -237,18 +269,36 @@ export class Navigator {
     const subRoute = isSubRoute ?  name : null;
     const subRouteParams = isSubRoute ? params : null;
     const routeParams = isSubRoute ? prevParams : params;
-    
-    if(isSubRoute){
-      this.router.replaceHistoryState(route, routeParams);
-    }
 
-    const navigatorState = {
+    let navigatorState: NavigatorState = {
       route,
       subRoute, 
       subRouteParams,     
       history,
       params: routeParams,
     } 
+    
+    if(isSubRoute){
+      this.router.replaceHistoryState(route, routeParams);
+    }
+
+    history.push({
+      route: name,
+      path,
+      subRoute,
+      subRouteParams,        
+      params,
+    });
+
+    if(route === prevName 
+      && prevHistoryState.route !== route 
+      && !!prevHistoryState.subRoute
+      )
+    {
+      history.pop();
+      navigatorState = {...prevHistoryState, history};
+    }
+
 
     this.setState(navigatorState);
   }

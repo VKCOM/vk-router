@@ -46,14 +46,19 @@ export interface NavigatorStatesToSubscriber {
 export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;
 
 export interface NavigatorRoute {
-  name: string,
-  path: string,
-  subRoute?: boolean,
-  title?: string,
+  name: string;
+  path?: string;
+  params?: NavigatorParams;
+  subRoute?: boolean;
+  title?: string;
   children?: NavigatorRoute[],
 }
 
-interface NavigatorRouteProperties{
+interface NavigatorRouteParams {
+  [key: string] : any;
+}
+
+interface NavigatorRouteProperties {
   [key:string]: any
 }
 
@@ -215,8 +220,44 @@ export class Navigator {
     return routeData;
   }
 
-  private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {
-    return routes;
+  private iterateRouteTree = (routes:NavigatorRoute[], callback: (el:NavigatorRoute, index: number)=> any) => {
+    if(Array.isArray(routes)){
+      routes.forEach((el, index)=>{
+        callback(el, index)
+        if(Array.isArray(el.children)){
+          this.iterateRouteTree(el.children, callback);
+        }
+      })
+    }
+  }
+
+  private buildPath = (name: string, params: NavigatorRouteParams) =>{
+    let path = '/';
+    if(name){
+      path += name;
+    }
+    if(params){
+      let paramsPath = '';
+      // Object.keys(params).forEach((paramKey) => {
+        
+      // })
+      path += paramsPath;
+    }
+    
+    return path;
+  }
+
+  private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {  
+    const _this = this;
+    this.iterateRouteTree(routes, (route:NavigatorRoute) =>{
+        const { name, params = {}} = route;
+        const path = this.buildPath(name, params); //_this.router.buildPath(name, params);
+        route.path = path;
+    });
+
+    console.log(routes);
+
+    return routes as CoreRoute[];
   }
 
   private broadCastState = () => {

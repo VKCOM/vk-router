@@ -250,13 +250,11 @@ export class Navigator {
   private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {  
     const _this = this;
     this.iterateRouteTree(routes, (route:NavigatorRoute) =>{
-        const { name, params = {}} = route;
-        const path = this.buildPath(name, params); //_this.router.buildPath(name, params);
+        const { name, params = {}, path: routePath } = route;
+        const path = routePath || this.buildPath(name, params); //_this.router.buildPath(name, params);
         route.path = path;
     });
-
-    console.log(routes);
-
+ 
     return routes as CoreRoute[];
   }
 

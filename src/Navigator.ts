@@ -166,11 +166,7 @@ export class Navigator {
       
       let pathstring = hashMode ? '#': '';
        
-      paths.forEach((path: string) => {
-
-          /**
-           * 
-           */
+      paths.forEach((path: string) => { 
         
           const historyRecords: NavigatorHistoryRecord[] = 
             this.routes

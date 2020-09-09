@@ -1,5 +1,5 @@
 import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreRoute, CoreSubscribeFn, CoreRouterState } from './RouterCore';  
-
+import { buildUrlParams, getUrlParams } from './utils';
 export interface CreateNavigatorOptions {
   routes?: NavigatorRoute[];
   config?: NavigatorConfig 
@@ -229,23 +229,7 @@ export class Navigator {
         }
       })
     }
-  }
-
-  private buildPath = (name: string, params: NavigatorRouteParams) =>{
-    let path = '/';
-    if(name){
-      path += name;
-    }
-    if(params){
-      let paramsPath = '';
-      // Object.keys(params).forEach((paramKey) => {
-        
-      // })
-      path += paramsPath;
-    }
-    
-    return path;
-  }
+  } 
 
   private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {  
     const _this = this;
@@ -395,6 +379,42 @@ export class Navigator {
     return this.prevState;
   }
 
+
+  private validateParams = (params: NavigatorParams) => {
+    if(!params.page){
+      throw new Error('Wrong params format');
+    }
+    return true;
+  } 
+
+  public buildPath = (name: string, params: NavigatorParams) => {
+    let path = '';
+    const gatheredParams  = {...params, page: name };
+    if(this.validateParams(gatheredParams)){
+      path += `?${buildUrlParams(gatheredParams)}`;
+    }
+    
+    console.log(path);
+    return path;
+  }
+   
+  public parsePath = (search: string) => {
+    const commonParams = getUrlParams(search);
+    return this.extractRouteAndParams(commonParams);
+  }
+
+  public extractRouteAndParams = (params: NavigatorParams) => {
+    // const pesistentParams = [...this.config.persistentParams, ...NAVIGATOR_DEFAULT_PERSISTEN_PARAMS];
+    // const persisten = Object.keys(params).filter((param) => persistenParams.includes(param));
+    // const remainParams = params;
+    // return {
+    //   ...persistent,
+    //   params: remainParams;
+    // }
+    return {
+      params
+    }
+  }
 }
 
 export const createNavigator: CreateNavigator = ({

@@ -1,9 +1,8 @@
 import { createRouter, Options, Route, Router, State, SubscribeFn } from "router5";
-import browserPlugin from "router5-plugin-browser";
 import listenersPlugin, { ListenersPluginOptions, Listener } from "router5-plugin-listeners";
-import persistentParamsPlugin from "router5-plugin-persistent-params"; 
-// import customBrowserPlugin from './BrowserPlugin';
-import { BrowserPluginOptions } from 'router5-plugin-browser/dist/types'; 
+import persistentParamsPlugin from 'router5-plugin-persistent-params'; 
+import browserPlugin from './lib/browser-plugin';
+import { BrowserPluginOptions } from "./lib/browser-plugin/types"; 
 
 export type WrapperConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
 
@@ -35,10 +34,9 @@ const {
     defaultParams = {},
     base = '',
     useHash = false,
-    persistentParams = [
-      "page"
-    ],
+    persistentParams = [],
     autoCleanUp = false,
+    useQueryNavigation = true,
   } = config;
 
   const createRouterOptions: Partial<Options> = {
@@ -49,6 +47,7 @@ const {
   const browserPluginParams: BrowserPluginOptions = {
     base,
     useHash,
+    useQueryNavigation,
   };
 
   const listenersPluginParams: ListenersPluginOptions = {

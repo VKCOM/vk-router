@@ -1,5 +1,7 @@
 import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreRoute, CoreSubscribeFn, CoreRouterState } from './RouterCore';  
-import { buildUrlParams, getUrlParams, buildTokenStringForPath } from './utils';
+import { getUrlParams, buildTokenStringForPath } from './utils';
+import { ERROR_INVALID_PARAMS } from './constants';
+
 export interface CreateNavigatorOptions {
   routes?: NavigatorRoute[];
   config?: NavigatorConfig 
@@ -128,7 +130,7 @@ export class Navigator {
       if(route && prevRoute && route === prevRoute){
         history.pop();
         const prevHistoryState = history[history.length - 1];
-        console.log('popstate', route, '--',prevRoute, '---', prevHistoryState.route);
+        // console.log('popstate', route, '--',prevRoute, '---', prevHistoryState.route);
       
         // if(prevRoute !== prevHistoryState.route){
         //   state = prevHistoryState;
@@ -297,9 +299,9 @@ export class Navigator {
       params: routeParams,
     } 
     
-    if(isSubRoute){
-      this.router.replaceHistoryState(route, routeParams);
-    }
+    // if(isSubRoute){
+    //   this.router.replaceHistoryState(route, routeParams);
+    // }
 
     history.push({
       route: name,
@@ -384,11 +386,10 @@ export class Navigator {
   } 
 
   public buildPath = (name: string, params: NavigatorParams) => {
-    let path = '';
-    if(this.validateParams(params)){
-      return `?:page&:${buildTokenStringForPath(params)}`;
+    if(!this.validateParams(params)){
+      throw new Error(ERROR_INVALID_PARAMS);
     }
-    return path;
+    return `/${name}${buildTokenStringForPath(params)}`;
   }
    
   public parsePath = (search: string) => {

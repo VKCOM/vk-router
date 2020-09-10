@@ -14,7 +14,14 @@ export const buildUrlParams = (params: URLParamsCollection) => {
     const esc = encodeURIComponent;
     const query = Object.keys(params)
         .map(k => esc(k) + '=' + esc(params[k]))
-        .join('&');
+        .join('&:');
     return query;
 };
 
+export const buildTokenStringForPath = (params: URLParamsCollection) => {
+    const esc = encodeURIComponent;
+    const query = Object.keys(params)
+        .map(k => esc(k))
+        .join('&');
+    return query;
+};

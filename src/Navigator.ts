@@ -1,5 +1,5 @@
 import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreRoute, CoreSubscribeFn, CoreRouterState } from './RouterCore';  
-import { buildUrlParams, getUrlParams } from './utils';
+import { buildUrlParams, getUrlParams, buildTokenStringForPath } from './utils';
 export interface CreateNavigatorOptions {
   routes?: NavigatorRoute[];
   config?: NavigatorConfig 
@@ -377,7 +377,7 @@ export class Navigator {
 
 
   private validateParams = (params: NavigatorParams) => {
-    if(!params.page){
+    if(!params){
       throw new Error('Wrong params format');
     }
     return true;
@@ -385,12 +385,9 @@ export class Navigator {
 
   public buildPath = (name: string, params: NavigatorParams) => {
     let path = '';
-    const gatheredParams  = {...params, page: name };
-    if(this.validateParams(gatheredParams)){
-      path += `?${buildUrlParams(gatheredParams)}`;
+    if(this.validateParams(params)){
+      return `?:page&:${buildTokenStringForPath(params)}`;
     }
-    
-    console.log(path);
     return path;
   }
    

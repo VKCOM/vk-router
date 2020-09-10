@@ -2,6 +2,7 @@ import { createRouter, Options, Route, Router, State, SubscribeFn } from "router
 import browserPlugin from "router5-plugin-browser";
 import listenersPlugin, { ListenersPluginOptions, Listener } from "router5-plugin-listeners";
 import persistentParamsPlugin from "router5-plugin-persistent-params"; 
+// import customBrowserPlugin from './BrowserPlugin';
 import { BrowserPluginOptions } from 'router5-plugin-browser/dist/types'; 
 
 export type WrapperConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
@@ -32,9 +33,11 @@ export const createRouterCore: CreateRouterCore = ({
 const {
     defaultRoute = '/',
     defaultParams = {},
-    base = '.',
+    base = '',
     useHash = false,
-    persistentParams = [],
+    persistentParams = [
+      "page"
+    ],
     autoCleanUp = false,
   } = config;
 
@@ -54,6 +57,7 @@ const {
   
   const router = createRouter(routes, createRouterOptions);
   router.usePlugin(browserPlugin(browserPluginParams));
+  // router.usePlugin(customBrowserPlugin(browserPluginParams));
   router.usePlugin(listenersPlugin(listenersPluginParams));
   router.usePlugin(persistentParamsPlugin(persistentParams));
   return router;

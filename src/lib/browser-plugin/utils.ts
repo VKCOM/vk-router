@@ -21,3 +21,5 @@ export const buildUrlParams = (params: URLParamsCollection) => {
     } 
     return '';
 };
+
+export const buildPathFromDotPath = (path: string) => path ? '/'+ path.split('.').join('/') : '';

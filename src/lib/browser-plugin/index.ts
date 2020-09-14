@@ -43,25 +43,28 @@ function browserPluginFactory(
     let disableUrlUpdate = false;
 
     return function browserPlugin(router: Router) {
-        const routerOptions = router.getOptions()
-        const routerStart = router.start
+        const routerOptions = router.getOptions();
+        const routerStart = router.start;
 
         router.disableUrlUpdate = (value: boolean) => {
             disableUrlUpdate = value;
-        }  
+        };  
 
         const buildUrl = (route: any, params: any) => {
             const base = options.base || ''
             const prefix = options.useHash ? `#${options.hashPrefix}` : ''
-            const path = router.buildPath(route, params)
-
-            return base + prefix + path
+            const path = router.buildPath(route, params);
+            return base + prefix + path;
         }
         
         const buildQueryUrl = (route: any, params: any) => {
-            const paramsSearch = buildUrlParams(params);
-            const search = paramsSearch.length ? `&${paramsSearch}`: ''; 
-            return `?page=${route}${search}`;
+            const { isSubRoute, prevRoute, subroute, ...routeParams } = params;
+            const queryParams = buildUrlParams(routeParams);
+            const search = queryParams.length ? `&${queryParams}`: '';
+            const url = isSubRoute || subroute
+                ?`?route=${prevRoute}&subroute=${route}${search}`
+                :`?route=${route}${search}`;
+            return url;
         }
 
         router.buildUrl = options.useQueryNavigation ? buildQueryUrl : buildUrl;
@@ -79,10 +82,9 @@ function browserPluginFactory(
 
             const pathnamePart = pathParts[1] 
             const searchPart = pathParts[3] || ''
-            const { page, ...searchData} = getUrlParams(searchPart);
+            const { route, subroute, ...searchData} = getUrlParams(searchPart);
             const search = buildUrlParams(searchData)
-            const pathname = pathnamePart + page;
-            console.log({ pathname, pathParts, search });
+            const pathname = pathnamePart + (subroute || route);
             return (
                 (options.base
                     ? pathname.replace(new RegExp('^' + options.base), '')

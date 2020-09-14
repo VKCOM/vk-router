@@ -1,5 +1,5 @@
 import { Browser } from './types'
-
+import { getUrlParams, buildUrlParams, buildPathFromDotPath } from './utils';
 const value = (arg: any) => () => arg
 const noop = () => {}
 
@@ -41,8 +41,19 @@ const getLocation = (opts: any) => {
         : window.location.pathname.replace(new RegExp('^' + opts.base), '')
 
     // Fix issue with browsers that don't URL encode characters (Edge)
-    const correctedPath = safelyEncodePath(path)
-
+    
+    if(opts.useQueryNavigation){
+        const { route, subroute, ...queryParams } = getUrlParams(window.location.search);
+        const search = subroute 
+          ? buildUrlParams({...queryParams, subroute, prevRoute: route }) 
+          : buildUrlParams({...queryParams });
+          
+        const actualPath = subroute || route;
+        // Мы фактически на subroute, но в урле сохраняем page
+        const correctedPath = safelyEncodePath(buildPathFromDotPath(actualPath));
+        return `${(correctedPath || '/')}?${search}`;
+    };
+    const correctedPath = safelyEncodePath(path);
     return (correctedPath || '/') + window.location.search
 }
 

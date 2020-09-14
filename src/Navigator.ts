@@ -1,6 +1,8 @@
 import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreRoute, CoreSubscribeFn, CoreRouterState } from './RouterCore';  
 import { getUrlParams, buildTokenStringForPath } from './utils';
 import { ERROR_INVALID_PARAMS } from './constants';
+import { DoneFn } from 'router5/dist/types/base';
+import { buildUrlParams } from './lib/browser-plugin/utils';
 
 export interface CreateNavigatorOptions {
   routes?: NavigatorRoute[];
@@ -74,7 +76,7 @@ export class Navigator {
 
   public state: NavigatorState = {};
   public prevState: NavigatorState = {};
-  
+  public history:NavigatorHistoryRecord[] = [];
   public routes: NavigatorRoute[] = [];
   public routeProperties: NavigatorRouteProperties = {};
   public config: NavigatorConfig = {};
@@ -91,18 +93,17 @@ export class Navigator {
       routes: this.proccessRoutes(this.routes), 
       config: this.config
     }); 
-                  
     this.router.subscribe(this.syncNavigatorStateWithCore); 
+    this.router.start();
     const initState = this.router.matchUrl(window.location.href); 
 
-    if(initState){
+    if(initState){ 
       const { name: route, path, params } = initState;
-      const history = [{ route: name, path, params }];
- 
+      this.history = [{ route: name, path, params }];
+      
       this.setState({
           route,
           path,
-          history,
           go: this.go,
           back: this.back,
           config,
@@ -115,72 +116,94 @@ export class Navigator {
   } 
 
   private handlePopStateEvent  = () =>{
-    window.addEventListener('popstate', () => {
-      const { route } = this.state;
-      const { route: prevRoute } = this.prevState;
-      const { history: prevHistory = [] } = this.state;
+    // window.addEventListener('popstate', () => {
+    //   const { route } = this.state;
+    //   const { route: prevRoute } = this.prevState;
+    //   const { history: prevHistory = [] } = this.state;
       
-      const history = [
-       ...prevHistory,
-      ] 
+    //   const history = [
+    //    ...prevHistory,
+    //   ] 
 
-      const prevHistoryState = history[history.length - 1];
-      let state = {...this.state};
+    //   const prevHistoryState = history[history.length - 1];
+    //   let state = {...this.state};
        
-      if(route && prevRoute && route === prevRoute){
-        history.pop();
-        const prevHistoryState = history[history.length - 1];
-        // console.log('popstate', route, '--',prevRoute, '---', prevHistoryState.route);
+    //   if(route && prevRoute && route === prevRoute){
+    //     history.pop();
+    //     const prevHistoryState = history[history.length - 1];
+    //     // console.log('popstate', route, '--',prevRoute, '---', prevHistoryState.route);
       
-        // if(prevRoute !== prevHistoryState.route){
-        //   state = prevHistoryState;
-        //   console.log('returned to modal', prevHistoryState, history);
-        // }
-      }
+    //     // if(prevRoute !== prevHistoryState.route){
+    //     //   state = prevHistoryState;
+    //     //   console.log('returned to modal', prevHistoryState, history);
+    //     // }
+    //   }
 
-      this.setState({ ...state, history });
-      // let navigatorState = {};
-      // if(route === prevRoute 
-      //   && prevHistoryState.route !== route 
-      //   && !!prevHistoryState.subRoute
-      //   )
-      // {
-      //   history.pop();
-      //   navigatorState = {...prevHistoryState, history};
-      //   this.setState(navigatorState);
-      // } 
-    })
+    //   this.setState({ ...state, history });
+    //   // let navigatorState = {};
+    //   // if(route === prevRoute 
+    //   //   && prevHistoryState.route !== route 
+    //   //   && !!prevHistoryState.subRoute
+    //   //   )
+    //   // {
+    //   //   history.pop();
+    //   //   navigatorState = {...prevHistoryState, history};
+    //   //   this.setState(navigatorState);
+    //   // } 
+    // })
   }
 
-  private buildFakeHistory = () => {
-
+  private buildFakeHistory = () => { 
     /**
      *  Достраиваем историю в том случае если мы перешли напрямую 
      *  достраиваем и в стек браузера и в стек истории модуля
      */
-    const browserHistory = window.history;
-    const { history } = this.state;
+    const browserHistory = window.history; 
     if(browserHistory.length <= 2){ 
-      const { origin, hash, pathname } = window.location;
-      const hashMode = !!hash;
-      const address = hashMode ? hash.replace('#', '') : pathname; 
-      const paths = address.split('/').filter((path: string) => path);
-      
-      let pathstring = hashMode ? '#': '';
-       
-      paths.forEach((path: string) => { 
-        
-          const historyRecords: NavigatorHistoryRecord[] = 
-            this.routes
-                .filter(({ path }:NavigatorRoute ) => path.includes(path))
-                .map(({name, path}: NavigatorRoute ) => ({ route: name, path }));
+      /**
+       * 3 случая - навигация обычная, через hash и через query params
+       */
+      const { origin, hash, pathname, search } = window.location; 
+      if(this.config.useQueryNavigation){
+        const { route, subroute, queryParams } = getUrlParams(search);
+        let pathQuery = '';
+        let baseRoute = '';
 
-          this.setState({ history: [...history, ...historyRecords] });
-         
-          pathstring += `/${path}`;  
-          console.log(pathstring);       
-          browserHistory.pushState(null, null, `${origin}${pathstring}`);
-      });
+        if(route){
+          const paths = route.split('.'); 
+          paths.forEach((path: string) => {
+            const searchPath = buildUrlParams({
+              route: pathQuery += (pathQuery.length ? `.${path}`: path),
+              ...queryParams
+            })
+            baseRoute = `${origin}/?${searchPath}`;       
+            browserHistory.pushState(null, null, baseRoute);
+          });
+        }
+
+        if(subroute){
+          const subpaths = subroute.split('.');
+          let subPathQuery = '';
+          subpaths.forEach((subpath: string) => {
+            const searchPath = buildUrlParams({
+              subroute: subPathQuery += (subPathQuery.length ? `.${subpath}`: subpath),
+              ...queryParams
+            })
+            const url = `${baseRoute}&${searchPath}`;
+            browserHistory.pushState(null, null, url);
+          });
+        }
+       
+      } else {
+        const hashMode = !!hash;
+        const address = hashMode ? hash.replace('#', '') : pathname; 
+        const paths = address.split('/').filter((path: string) => path);
+        let pathstr = hashMode ? '#': ''; 
+        paths.forEach((path: string) => {  
+            pathstr += `/${path}`;      
+            browserHistory.pushState(null, null, `${origin}${pathstr}`);
+        });
+      }  
     }
   }
 
@@ -229,11 +252,11 @@ export class Navigator {
     }
   } 
 
-  private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {  
-    const _this = this;
+  private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {   
     this.iterateRouteTree(routes, (route:NavigatorRoute) =>{
         const { name, params = {}, path: routePath } = route;
-        const path = routePath || this.buildPath(name, params); //_this.router.buildPath(name, params);
+        const path = routePath || this.buildPath(name, params);  
+        // TODO: полностью удалить path из модуля 
         route.path = path;
     });
  
@@ -248,7 +271,7 @@ export class Navigator {
   
   private setState = (state: Partial<NavigatorState>) => {
     this.prevState = {...this.state};
-    this.state = {...this.state, ...state};
+    this.state = {...this.state, ...state };
     this.broadCastState();
   }
 
@@ -258,16 +281,16 @@ export class Navigator {
     return resultArr.length > 1 ? resultArr.join('.') : resultArr[0];
   }
 
-  private syncNavigatorStateWithCore: CoreSubscribeFn = ({ route: coreState, previousRoute: prevCoreState }) => {
-    const { name, params = {}, path, meta } = coreState;  
-    const { name: prevName, params: prevParams = {} } = prevCoreState || {};
-    const { history: prevHistory = [] } = this.state;
+  private syncNavigatorStateWithCore: CoreSubscribeFn = (state) => {
+    const { route: coreState, previousRoute: prevCoreState } = state; 
+    const { name, params = {}, path } = coreState;  
+    // генерируется из параметров просовываемых модулем browser в том случае если обновились на subroute
+    const prevCoreStateFromUrlParams = { name: params.prevRoute, params };
     
-    const history = [
-      ...prevHistory,
-    ] 
- 
-  
+    const { name: prevName, params: prevParams = {} } = prevCoreState || prevCoreStateFromUrlParams; 
+    // очистка параметров идущих наружу
+    const cleanParams = ({ prevRoute, isSubRoute, subroute, route, ...params }: NavigatorParams = {}) => params;
+
     /**
      * Проверяем следующее состояние роутера
      * если следующий роут - это subroute текущего, то:
@@ -277,51 +300,47 @@ export class Navigator {
      * то оставляем текущий роут
      */
 
-    const prevHistoryState = history[history.length - 1];
-    
     const routeData = this.getRouteData(name);
     const prevRouteIsSubRoute = this.state.subRoute === prevName; 
-    const isSubRoute = routeData && routeData.subRoute;
+    const isSubRoute = (routeData && routeData.subRoute) || !!params.subroute;
+    
     const route = isSubRoute 
       ? prevRouteIsSubRoute 
-        ? this.state.route : prevName
+        ? this.state.route 
+        : prevName
       : name;
 
-    const subRoute = isSubRoute ?  name : null;
-    const subRouteParams = isSubRoute ? params : null;
-    const routeParams = isSubRoute ? prevParams : params;
-
-    let navigatorState: NavigatorState = {
+    const subRoute = isSubRoute 
+    ?  params.subroute 
+      ? params.subroute 
+      : name 
+    : null;
+  
+    const subRouteParams = isSubRoute 
+    ? cleanParams(params) 
+    : null;
+  
+    const routeParams = isSubRoute 
+      ? cleanParams(prevParams) 
+      : cleanParams(params);
+    
+    const State: NavigatorState = {
       route,
       subRoute, 
       subRouteParams,     
-      history,
       params: routeParams,
-    } 
-    
-    // if(isSubRoute){
-    //   this.router.replaceHistoryState(route, routeParams);
-    // }
-
-    history.push({
-      route: name,
-      path,
-      subRoute,
-      subRouteParams,        
-      params,
-    });
-
-    if(route === prevName 
-      && prevHistoryState.route !== route 
-      && !!prevHistoryState.subRoute
-      )
-    {
-      history.pop();
-      navigatorState = {...prevHistoryState, history};
     }
+  
+    if(route === prevName)
+    {
+      this.history.pop();
+    } else {
+      this.history.push({ ...State, path });
+    }
+ 
+    console.log('history', this.history);
 
-
-    this.setState(navigatorState);
+    this.setState(State);
   }
  
   public subscribe=(subscriber: NavigatorSubscriber) => {
@@ -353,16 +372,33 @@ export class Navigator {
     
   }
 
+  private getTarget = (path: string) => path.split('.').reverse()[0];
+
+  private checkSubroute(to: string){
+    let result = false;
+    const target = this.getTarget(to); 
+    const callback = ({ name, subRoute } :NavigatorRoute) => { 
+      if(name === target && subRoute){
+        result = true;
+      }
+    };
+    this.iterateRouteTree(this.routes, callback);
+    return result;
+  }
+
   public go = (to: string, params?: any, options: any = {}) => {
-    this.router.navigate(to, params, options);
+    const isSubRoute = this.checkSubroute(to);
+    const prevRoute = this.state.route;
+    this.router.navigate(to, { ...params, prevRoute, isSubRoute }, options);
   }
  
   public back: VoidFunction = () => {
-    window.history.back;
+    window.history.back();
   };
 
-  public start = (params?: string | CoreRouterState) => {  
-     this.router.start(params);
+  public start = async (...args: DoneFn[]) => {
+     await this.router.start(...args);
+     this.broadCastState();
   }
 
   public stop = () => { 
@@ -392,23 +428,23 @@ export class Navigator {
     return `/${name}${buildTokenStringForPath(params)}`;
   }
    
-  public parsePath = (search: string) => {
-    const commonParams = getUrlParams(search);
-    return this.extractRouteAndParams(commonParams);
-  }
+  // public parsePath = (search: string) => {
+  //   const commonParams = getUrlParams(search);
+  //   return this.extractRouteAndParams(commonParams);
+  // }
 
-  public extractRouteAndParams = (params: NavigatorParams) => {
-    // const pesistentParams = [...this.config.persistentParams, ...NAVIGATOR_DEFAULT_PERSISTEN_PARAMS];
-    // const persisten = Object.keys(params).filter((param) => persistenParams.includes(param));
-    // const remainParams = params;
-    // return {
-    //   ...persistent,
-    //   params: remainParams;
-    // }
-    return {
-      params
-    }
-  }
+  // public extractRouteAndParams = (params: NavigatorParams) => {
+  //   // const pesistentParams = [...this.config.persistentParams, ...NAVIGATOR_DEFAULT_PERSISTEN_PARAMS];
+  //   // const persisten = Object.keys(params).filter((param) => persistenParams.includes(param));
+  //   // const remainParams = params;
+  //   // return {
+  //   //   ...persistent,
+  //   //   params: remainParams;
+  //   // }
+  //   return {
+  //     params
+  //   }
+  // }
 }
 
 export const createNavigator: CreateNavigator = ({

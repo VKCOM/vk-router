@@ -115,43 +115,7 @@ export class Navigator {
     this.handlePopStateEvent();
   } 
 
-  private handlePopStateEvent  = () =>{
-    // window.addEventListener('popstate', () => {
-    //   const { route } = this.state;
-    //   const { route: prevRoute } = this.prevState;
-    //   const { history: prevHistory = [] } = this.state;
-      
-    //   const history = [
-    //    ...prevHistory,
-    //   ] 
-
-    //   const prevHistoryState = history[history.length - 1];
-    //   let state = {...this.state};
-       
-    //   if(route && prevRoute && route === prevRoute){
-    //     history.pop();
-    //     const prevHistoryState = history[history.length - 1];
-    //     // console.log('popstate', route, '--',prevRoute, '---', prevHistoryState.route);
-      
-    //     // if(prevRoute !== prevHistoryState.route){
-    //     //   state = prevHistoryState;
-    //     //   console.log('returned to modal', prevHistoryState, history);
-    //     // }
-    //   }
-
-    //   this.setState({ ...state, history });
-    //   // let navigatorState = {};
-    //   // if(route === prevRoute 
-    //   //   && prevHistoryState.route !== route 
-    //   //   && !!prevHistoryState.subRoute
-    //   //   )
-    //   // {
-    //   //   history.pop();
-    //   //   navigatorState = {...prevHistoryState, history};
-    //   //   this.setState(navigatorState);
-    //   // } 
-    // })
-  }
+  private handlePopStateEvent  = () => {}
 
   private buildFakeHistory = () => { 
     /**

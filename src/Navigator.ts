@@ -323,7 +323,9 @@ export class Navigator {
     const routeParams = isSubRoute 
       ? cleanParams(prevParams) 
       : cleanParams(params);
-    
+     
+    const isBack = state && this.prevState && this.prevState.route === name;
+     
     const State: NavigatorState = {
       route,
       subRoute, 
@@ -331,14 +333,11 @@ export class Navigator {
       params: routeParams,
     }
   
-    if(route === prevName)
-    {
+    if (isBack) {
       this.history.pop();
     } else {
       this.history.push({ ...State, path });
     }
- 
-    console.log('history', this.history);
 
     this.setState(State);
   }

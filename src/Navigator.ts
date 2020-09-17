@@ -352,7 +352,16 @@ export class Navigator {
   public go = (to: string, params?: any, options: any = {}) => {
     const isSubRoute = this.checkSubroute(to);
     const prevRoute = this.state.route;
-    this.router.navigate(to, { ...params, prevRoute, isSubRoute }, options);
+    const coreParams = {
+      prevRoute, 
+      isSubRoute,
+      route: {},
+      subroute: {},
+    };
+    if(isSubRoute){
+      coreParams.route = { ...params }
+    }
+    this.router.navigate(to, coreParams, options);
   }
  
   public back: VoidFunction = () => {

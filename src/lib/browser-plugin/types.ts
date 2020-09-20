@@ -8,6 +8,8 @@ export interface BrowserPluginOptions {
     mergeState?: boolean
     preserveHash?: boolean
     useQueryNavigation?: boolean;
+    sourceRoutes?: any[],
+    subRouteKey?: string,
 }
 
 export interface Browser {
@@ -26,4 +28,8 @@ export interface HistoryState extends State {
 
 export interface URLParamsCollection {
     [key: string]: any
+}
+
+export interface CoreParams {
+  [key: string]: any;
 }

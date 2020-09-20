@@ -1,4 +1,5 @@
-import { createNavigator, NavigatorState, CreateNavigatorOptions, Navigator, NavigatorStatesToSubscriber, NavigatorRoute } from './Navigator';
+import { createNavigator, NavigatorState, CreateNavigatorOptions, Navigator, NavigatorStatesToSubscriber } from './Navigator';
+import { NavigatorRoute } from "./types";
 import NavigatorProvider from './Provider';
 import { withNavigator, WithNavigator } from './hoc';
 

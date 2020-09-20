@@ -1,4 +1,6 @@
-import { URLParamsCollection } from './types';
+import { URLParamsCollection, NavigatorRoute, NavigatorParams } from './types';
+import { ERROR_INVALID_PARAMS } from './constants';
+import { CoreRoute } from './RouterCore';  
 
 export const getUrlParams = (url: string) => {
     const hashes = url.slice(url.indexOf('?') + 1).split('&')
@@ -29,3 +31,148 @@ export const buildTokenStringForPath = (params: URLParamsCollection) => {
     
     return '';
 };
+
+export const getTarget = (path: string) => path ? path.split('.').reverse()[0] : '';
+
+export const getRouteData = (path:string, routes: NavigatorRoute[]): NavigatorRoute | null => {
+    const pathSegments = path.split('.');   
+    let routeData = null; 
+    let pathSegmentIndex = 0;
+    const target = pathSegments[pathSegments.length - 1];
+
+    const lookForSegment = (routes: NavigatorRoute[])=> {
+      for(let i = 0; i < routes.length; ++i){
+        const route = routes[i];
+        const pathName = pathSegments[pathSegmentIndex];
+        if(route.name === pathName){
+          if(route.name === target){
+            routeData = route;
+            break;
+          }         
+          if(Array.isArray(route.children)){
+            pathSegmentIndex +=1;
+            lookForSegment(route.children);
+          }
+          break;
+        }
+      };
+    };
+
+    lookForSegment(routes);
+
+    return routeData;
+}
+
+export const iterateRouteTree = (routes:NavigatorRoute[], callback: (el:NavigatorRoute, index: number) => any) => {
+  if(Array.isArray(routes)){
+    routes.forEach((el, index) => {
+      callback(el, index)
+      if (Array.isArray(el.children)) {
+        iterateRouteTree(el.children, callback);
+      }
+    })
+  }
+} 
+
+export const checkSubroute = (to: string, routes: NavigatorRoute[], subrouteKey: string) => {
+    let result = false;
+    const target = getTarget(to); 
+    const callback = (route :NavigatorRoute) => { 
+      if(route.name === target && route[subrouteKey]){
+        result = true;
+      }
+    };
+    iterateRouteTree(routes, callback);
+    return result;
+};
+
+export const getParentRoute = (path: string): string => {
+  const resultArr = path.split('.');
+  resultArr.pop();
+  return resultArr.length > 1 ? resultArr.join('.') : resultArr[0];
+}
+
+export const validateParams = (params: NavigatorParams) => {
+    if(!params){
+      throw new Error('Wrong params format');
+    }
+    return true;
+  } 
+
+export const buildPathForRoute = (name: string, params: NavigatorParams) => {
+  if(!validateParams(params)){
+    throw new Error(ERROR_INVALID_PARAMS);
+  }
+  return `/${name}${buildTokenStringForPath(params)}`;
+}
+/**
+   * Метод для обхода входящей коллекции роутов по заданному пути
+   * нужен, т.к. router5 не хранит внутри себя доп свойств
+   * TODO: найти более эффективный способ добираться до свойств
+   */
+
+export const proccessRoutes = (routes: NavigatorRoute[]): CoreRoute[] => {   
+  iterateRouteTree(routes, (route:NavigatorRoute) =>{
+    const { name, params = {}, path: routePath } = route;
+    const path = routePath || buildPathForRoute(name, params);  
+    route.path = path;
+  });
+  return routes as CoreRoute[];
+}
+
+export const buildFakeHistory = (config: NavigatorParams) => { 
+    /**
+     *  Достраиваем историю в том случае если мы перешли напрямую 
+     *  достраиваем и в стек браузера и в стек истории модуля
+     */
+    const browserHistory = window.history; 
+    if(browserHistory.length <= 2){ 
+      /**
+       * 3 случая - навигация обычная, через hash и через query params
+       */
+      const { origin, hash, pathname, search } = window.location; 
+      if (config.useQueryNavigation) {
+        const { route, subroute, queryParams } = getUrlParams(search);
+        let pathQuery = '';
+        let baseRoute = '';
+
+        if (route) {
+          const paths = route.split('.'); 
+          paths.forEach((path: string) => {
+            const searchPath = buildUrlParams({
+              route: pathQuery += (pathQuery.length ? `.${path}`: path),
+              ...queryParams
+            })
+            baseRoute = `${origin}/?${searchPath}`;       
+            browserHistory.pushState(null, null, baseRoute);
+          });
+        }
+
+        if(subroute){
+          const subpaths = subroute.split('.');
+          let subPathQuery = '';
+          subpaths.forEach((subpath: string) => {
+            const searchPath = buildUrlParams({
+              subroute: subPathQuery += (subPathQuery.length ? `.${subpath}`: subpath),
+              ...queryParams
+            })
+            const url = `${baseRoute}&${searchPath}`;
+            browserHistory.pushState(null, null, url);
+          });
+        }
+       
+      } else {
+        const hashMode = !!hash;
+        const address = hashMode ? hash.replace('#', '') : pathname; 
+        const paths = address.split('/').filter((path: string) => path);
+        let pathstr = hashMode ? '#': ''; 
+        paths.forEach((path: string) => {  
+            pathstr += `/${path}`;      
+            browserHistory.pushState(null, null, `${origin}${pathstr}`);
+        });
+      }  
+    }
+  }
+
+// очистка параметров идущих наружу
+export const cleanParams = ({ prevRoute, prevParams, isSubRoute, subroute, route, ...params }: NavigatorParams = {}) => params;

@@ -1,8 +1,7 @@
-import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreRoute, CoreSubscribeFn, CoreRouterState } from './RouterCore';  
-import { getUrlParams, buildTokenStringForPath } from './utils';
-import { ERROR_INVALID_PARAMS } from './constants';
+import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreRoute, CoreSubscribeFn } from './RouterCore';  
+import { getRouteData, proccessRoutes, checkSubroute, buildFakeHistory, cleanParams } from './utils'; 
 import { DoneFn } from 'router5/dist/types/base';
-import { buildUrlParams } from './lib/browser-plugin/utils';
+import { NavigatorParams, NavigatorRoute } from './types';
 
 export interface CreateNavigatorOptions {
   routes?: NavigatorRoute[];
@@ -14,10 +13,6 @@ export type CreateNavigator = (
 ) => Navigator;
 
 export interface NavigatorSubRoutes {
-  [key:string]: any,
-}
-
-export interface NavigatorParams {
   [key:string]: any,
 } 
 
@@ -49,19 +44,6 @@ export interface NavigatorStatesToSubscriber {
 
 export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;
 
-export interface NavigatorRoute {
-  name: string;
-  path?: string;
-  params?: NavigatorParams;
-  subRoute?: boolean;
-  title?: string;
-  children?: NavigatorRoute[],
-}
-
-interface NavigatorRouteParams {
-  [key: string] : any;
-}
-
 interface NavigatorRouteProperties {
   [key:string]: any
 }
@@ -90,16 +72,18 @@ export class Navigator {
     this.config = config;
 
     this.router = createRouterCore({
-      routes: this.proccessRoutes(this.routes), 
+      routes: this.routes, 
       config: this.config
     }); 
+
     this.router.subscribe(this.syncNavigatorStateWithCore); 
     this.router.start();
+
     const initState = this.router.matchUrl(window.location.href); 
 
-    if(initState){ 
+    if (initState) { 
       const { name: route, path, params } = initState;
-      this.history = [{ route: name, path, params }];
+      this.history = [{ route: name, subRoute: null, path, params }];
       
       this.setState({
           route,
@@ -111,121 +95,9 @@ export class Navigator {
           navigator: this,
       });
     }  
-    this.buildFakeHistory();
-    this.handlePopStateEvent();
+
+    buildFakeHistory(this.config);
   } 
-
-  private handlePopStateEvent  = () => {}
-
-  private buildFakeHistory = () => { 
-    /**
-     *  Достраиваем историю в том случае если мы перешли напрямую 
-     *  достраиваем и в стек браузера и в стек истории модуля
-     */
-    const browserHistory = window.history; 
-    if(browserHistory.length <= 2){ 
-      /**
-       * 3 случая - навигация обычная, через hash и через query params
-       */
-      const { origin, hash, pathname, search } = window.location; 
-      if(this.config.useQueryNavigation){
-        const { route, subroute, queryParams } = getUrlParams(search);
-        let pathQuery = '';
-        let baseRoute = '';
-
-        if(route){
-          const paths = route.split('.'); 
-          paths.forEach((path: string) => {
-            const searchPath = buildUrlParams({
-              route: pathQuery += (pathQuery.length ? `.${path}`: path),
-              ...queryParams
-            })
-            baseRoute = `${origin}/?${searchPath}`;       
-            browserHistory.pushState(null, null, baseRoute);
-          });
-        }
-
-        if(subroute){
-          const subpaths = subroute.split('.');
-          let subPathQuery = '';
-          subpaths.forEach((subpath: string) => {
-            const searchPath = buildUrlParams({
-              subroute: subPathQuery += (subPathQuery.length ? `.${subpath}`: subpath),
-              ...queryParams
-            })
-            const url = `${baseRoute}&${searchPath}`;
-            browserHistory.pushState(null, null, url);
-          });
-        }
-       
-      } else {
-        const hashMode = !!hash;
-        const address = hashMode ? hash.replace('#', '') : pathname; 
-        const paths = address.split('/').filter((path: string) => path);
-        let pathstr = hashMode ? '#': ''; 
-        paths.forEach((path: string) => {  
-            pathstr += `/${path}`;      
-            browserHistory.pushState(null, null, `${origin}${pathstr}`);
-        });
-      }  
-    }
-  }
-
-  /**
-   * Метод для обхода входящей коллекции роутов по заданному пути
-   * нужен, т.к. router5 не хранит внутри себя доп свойств
-   * TODO: найти более эффективный способ добираться до свойств
-   */
-  private getRouteData = (path:string): NavigatorRoute | null => {
-    const pathSegments = path.split('.');   
-    let routeData = null; 
-    let pathSegmentIndex = 0;
-    const target = pathSegments[pathSegments.length - 1];
-
-    const lookForSegment = (routes: NavigatorRoute[])=> {
-      for(let i = 0; i < routes.length; ++i){
-        const route = routes[i];
-        const pathName = pathSegments[pathSegmentIndex];
-        if(route.name === pathName){
-          if(route.name === target){
-            routeData = route;
-            break;
-          }         
-          if(Array.isArray(route.children)){
-            pathSegmentIndex +=1;
-            lookForSegment(route.children);
-          }
-          break;
-        }
-      };
-    };
-
-    lookForSegment(this.routes);
-
-    return routeData;
-  }
-
-  private iterateRouteTree = (routes:NavigatorRoute[], callback: (el:NavigatorRoute, index: number)=> any) => {
-    if(Array.isArray(routes)){
-      routes.forEach((el, index)=>{
-        callback(el, index)
-        if(Array.isArray(el.children)){
-          this.iterateRouteTree(el.children, callback);
-        }
-      })
-    }
-  } 
-
-  private proccessRoutes=(routes: NavigatorRoute[]): CoreRoute[] => {   
-    this.iterateRouteTree(routes, (route:NavigatorRoute) =>{
-        const { name, params = {}, path: routePath } = route;
-        const path = routePath || this.buildPath(name, params);  
-        // TODO: полностью удалить path из модуля 
-        route.path = path;
-    });
- 
-    return routes as CoreRoute[];
-  }
 
   private broadCastState = () => {
      const toState = this.getState();
@@ -239,12 +111,6 @@ export class Navigator {
     this.broadCastState();
   }
 
-  private getParentRoute = (path: string): string => {
-    const resultArr = path.split('.');
-    resultArr.pop();
-    return resultArr.length > 1 ? resultArr.join('.') : resultArr[0];
-  }
-
   private syncNavigatorStateWithCore: CoreSubscribeFn = (state) => {
     const { route: coreState, previousRoute: prevCoreState } = state; 
     const { name, params = {}, path } = coreState;  
@@ -252,8 +118,7 @@ export class Navigator {
     const prevCoreStateFromUrlParams = { name: params.prevRoute, params };
     
     const { name: prevName, params: prevParams = {} } = prevCoreState || prevCoreStateFromUrlParams; 
-    // очистка параметров идущих наружу
-    const cleanParams = ({ prevRoute, isSubRoute, subroute, route, ...params }: NavigatorParams = {}) => params;
+
 
     /**
      * Проверяем следующее состояние роутера
@@ -264,7 +129,7 @@ export class Navigator {
      * то оставляем текущий роут
      */
 
-    const routeData = this.getRouteData(name);
+    const routeData = getRouteData(name, this.routes);
     const prevRouteIsSubRoute = this.state.subRoute === prevName; 
     const isSubRoute = (routeData && routeData.subRoute) || !!params.subroute;
     
@@ -307,9 +172,10 @@ export class Navigator {
   }
  
   public subscribe=(subscriber: NavigatorSubscriber) => {
-    if(!this.subscribers.includes(subscriber)){
+    if (!this.subscribers.includes(subscriber)) {
       this.subscribers.push(subscriber);
       this.broadCastState();
+
       return () => this.unsubscribe(subscriber);
     }
   } 
@@ -326,8 +192,8 @@ export class Navigator {
 
   public add = (routes: NavigatorRoute[]) => {
     if(Array.isArray(routes)){
-      this.routes = [...this.routes, ...routes]
-      this.router.add(this.proccessRoutes(routes)); 
+      this.routes = [ ...this.routes, ...routes]
+      this.router.add(proccessRoutes(routes)); 
     }
   }
 
@@ -335,33 +201,8 @@ export class Navigator {
     
   }
 
-  private getTarget = (path: string) => path.split('.').reverse()[0];
-
-  private checkSubroute(to: string){
-    let result = false;
-    const target = this.getTarget(to); 
-    const callback = ({ name, subRoute } :NavigatorRoute) => { 
-      if(name === target && subRoute){
-        result = true;
-      }
-    };
-    this.iterateRouteTree(this.routes, callback);
-    return result;
-  }
-
-  public go = (to: string, params?: any, options: any = {}) => {
-    const isSubRoute = this.checkSubroute(to);
-    const prevRoute = this.state.route;
-    const coreParams = {
-      prevRoute, 
-      isSubRoute,
-      route: {},
-      subroute: {},
-    };
-    if(isSubRoute){
-      coreParams.route = { ...params }
-    }
-    this.router.navigate(to, coreParams, options);
+  public go = (to: string, params?: any, options: any = {}, done?: any) => {
+    return this.router.go(to, params, options, done);
   }
  
   public back: VoidFunction = () => {
@@ -384,39 +225,6 @@ export class Navigator {
   public getPrevState = () => {
     return this.prevState;
   }
-
-
-  private validateParams = (params: NavigatorParams) => {
-    if(!params){
-      throw new Error('Wrong params format');
-    }
-    return true;
-  } 
-
-  public buildPath = (name: string, params: NavigatorParams) => {
-    if(!this.validateParams(params)){
-      throw new Error(ERROR_INVALID_PARAMS);
-    }
-    return `/${name}${buildTokenStringForPath(params)}`;
-  }
-   
-  // public parsePath = (search: string) => {
-  //   const commonParams = getUrlParams(search);
-  //   return this.extractRouteAndParams(commonParams);
-  // }
-
-  // public extractRouteAndParams = (params: NavigatorParams) => {
-  //   // const pesistentParams = [...this.config.persistentParams, ...NAVIGATOR_DEFAULT_PERSISTEN_PARAMS];
-  //   // const persisten = Object.keys(params).filter((param) => persistenParams.includes(param));
-  //   // const remainParams = params;
-  //   // return {
-  //   //   ...persistent,
-  //   //   params: remainParams;
-  //   // }
-  //   return {
-  //     params
-  //   }
-  // }
 }
 
 export const createNavigator: CreateNavigator = ({

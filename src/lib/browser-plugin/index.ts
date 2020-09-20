@@ -1,7 +1,8 @@
 import { PluginFactory, errorCodes, constants, Router, State } from 'router5'
 import safeBrowser from './browser'
-import { BrowserPluginOptions } from './types'
-import { buildUrlParams, getUrlParams } from './utils';
+import { BrowserPluginOptions, CoreParams } from './types'
+import { buildUrlParams, getUrlParams, buildNestedParams } from './utils';
+import { checkSubroute, cleanParams } from '../../utils';
 
 declare module 'router5/dist/types/router' {
     interface Router {
@@ -9,6 +10,8 @@ declare module 'router5/dist/types/router' {
         buildUrl(name: string, params?: { [key: string]: any }): string
         matchUrl(url: string): State | null
         buildQueryUrl(name: string, params?: { [key: string]: any }): string,
+        go(routeName: string, routeParams: Record<string, any>, options: any, done?: any): any,      
+        sourceRoutes: Record<string, any>[],
         replaceHistoryState(
             name: string,
             params?: { [key: string]: any },
@@ -18,6 +21,8 @@ declare module 'router5/dist/types/router' {
     }
 }
 
+
+
 const defaultOptions: BrowserPluginOptions = {
     forceDeactivate: true,
     useHash: false,
@@ -26,13 +31,15 @@ const defaultOptions: BrowserPluginOptions = {
     mergeState: false,
     preserveHash: true,
     useQueryNavigation: false,
+    sourceRoutes: [], 
+    subRouteKey: 'subRoute',
 }
 
 const source = 'popstate'
 
 function browserPluginFactory(
     opts?: BrowserPluginOptions,
-    browser = safeBrowser
+    browser = safeBrowser // коллекция роутов с доп данными
 ): PluginFactory {
     const options: BrowserPluginOptions = { ...defaultOptions, ...opts }
     const transitionOptions = {
@@ -45,12 +52,36 @@ function browserPluginFactory(
     return function browserPlugin(router: Router) {
         const routerOptions = router.getOptions();
         const routerStart = router.start;
+        const routerNavigate = router.navigate;
+        // const routerAdd = router.add;
+
+        router.sourceRoutes = opts.sourceRoutes;
+
 
         router.disableUrlUpdate = (value: boolean) => {
             disableUrlUpdate = value;
         };  
 
-        const buildUrl = (route: any, params: any) => {
+        router.go = (routeName: string, routeParams: Record<string, any>, options: any, done?: any) => {
+            const isSubRoute = checkSubroute(routeName, opts.sourceRoutes, opts.subRouteKey);
+            const prevRoute = router.getState().name;
+            const prevParams = cleanParams(router.getState().params);
+            
+            const coreParams: CoreParams = {
+              ...routeParams,
+              prevRoute,
+            };
+
+            if (isSubRoute) { 
+                coreParams.prevParams = prevParams;
+                coreParams.subRoute = routeName;
+            }
+
+            return routerNavigate(routeName, coreParams, options, done);
+        }
+        
+
+        const buildUrl = (route: any, params: Record<string, any>) => {
             const base = options.base || ''
             const prefix = options.useHash ? `#${options.hashPrefix}` : ''
             const path = router.buildPath(route, params);
@@ -58,12 +89,16 @@ function browserPluginFactory(
         }
         
         const buildQueryUrl = (route: any, params: any) => {
-            const { isSubRoute, prevRoute, subroute, ...routeParams } = params;
-            const queryParams = buildUrlParams(routeParams);
-            const search = queryParams.length ? `&${queryParams}`: '';
-            const url = isSubRoute || subroute
-                ?`?route=${prevRoute}&subroute=${route}${search}`
+           const { prevRoute, prevParams = {}, subRoute, ...routeParams } = params;
+            
+           const prevQuerySearch = buildUrlParams(prevParams);
+           const queryParams = buildUrlParams(routeParams);
+           const prevSearch = prevQuerySearch.length ? `&${prevQuerySearch}` : '';
+           const search = queryParams.length ? `&${queryParams}`: '';
+           const url = subRoute
+                ?`?route=${prevRoute}${prevSearch}&subRoute=${route}${search}`
                 :`?route=${route}${search}`;
+            console.log('buildQueryUrl', params, url);
             return url;
         }
 
@@ -82,9 +117,9 @@ function browserPluginFactory(
 
             const pathnamePart = pathParts[1] 
             const searchPart = pathParts[3] || ''
-            const { route, subroute, ...searchData} = getUrlParams(searchPart);
+            const { route, subRoute, ...searchData } = getUrlParams(searchPart);
             const search = buildUrlParams(searchData)
-            const pathname = pathnamePart + (subroute || route);
+            const pathname = pathnamePart + (subRoute || route);
             return (
                 (options.base
                     ? pathname.replace(new RegExp('^' + options.base), '')

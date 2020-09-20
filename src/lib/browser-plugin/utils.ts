@@ -12,14 +12,22 @@ export const getUrlParams = (url: string) => {
 
 export const buildUrlParams = (params: URLParamsCollection) => {
     const esc = encodeURIComponent;
-    const query = Object.keys(params)
+    const query = Object.keys(params).length ?  Object.keys(params)
         .map(k => esc(k) + '=' + esc(params[k]))
-        .join('&');
-    
-    if(query && query.length){
-        return query;
-    } 
-    return '';
+        .join('&')
+    : '';
+     
+    return query;
+};
+
+export const buildNestedParams = (params: URLParamsCollection) => {
+    const esc = encodeURIComponent;
+    const query = Object.keys(params).length ?  Object.keys(params)
+        .map(k => esc(k) + '=' + esc(params[k]))
+        .join('&')
+    : '';
+     
+    return query;
 };
 
 export const buildPathFromDotPath = (path: string) => path ? '/'+ path.split('.').join('/') : '';

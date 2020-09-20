@@ -2,7 +2,9 @@ import { createRouter, Options, Route, Router, State, SubscribeFn } from "router
 import listenersPlugin, { ListenersPluginOptions, Listener } from "router5-plugin-listeners";
 import persistentParamsPlugin from 'router5-plugin-persistent-params'; 
 import browserPlugin from './lib/browser-plugin';
-import { BrowserPluginOptions } from "./lib/browser-plugin/types"; 
+import { BrowserPluginOptions } from "./lib/browser-plugin/types";
+import { NavigatorRoute } from "./types";
+import { proccessRoutes } from './utils';
 
 export type WrapperConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
 
@@ -19,7 +21,7 @@ export type CoreRoute = Route;
 export type CoreRouterListener = Listener;
 
 export type CreateRouterCoreOptions = {
-    routes: Route[];
+    routes: NavigatorRoute[];
     config: WrapperConfig;
 }
 
@@ -48,15 +50,15 @@ const {
     base,
     useHash,
     useQueryNavigation,
+    sourceRoutes: routes,
   };
 
   const listenersPluginParams: ListenersPluginOptions = {
     autoCleanUp
   };
   
-  const router = createRouter(routes, createRouterOptions);
+  const router = createRouter<NavigatorRoute>(proccessRoutes(routes), createRouterOptions);
   router.usePlugin(browserPlugin(browserPluginParams));
-  // router.usePlugin(customBrowserPlugin(browserPluginParams));
   router.usePlugin(listenersPlugin(listenersPluginParams));
   router.usePlugin(persistentParamsPlugin(persistentParams));
   return router;

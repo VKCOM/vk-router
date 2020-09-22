@@ -41,16 +41,19 @@ const getLocation = (opts: any) => {
         ? window.location.hash.replace(new RegExp('^#' + opts.hashPrefix), '')
         : window.location.pathname.replace(new RegExp('^' + opts.base), '');
     
-    if(opts.useQueryNavigation){
-        const { route, subroute, ...queryParams } = getUrlParams(window.location.search);
-        const search = subroute 
-          ? buildUrlParams({ prevRoute: route, ...queryParams, subroute }) 
-          : buildUrlParams({...queryParams });
-          
+    if (opts.useQueryNavigation) {
+        const { route, subroute, routeParams } = getUrlParams(window.location.search);
+        const searchParams = subroute 
+          ? { route, subroute, ...routeParams }
+          : { route, ...routeParams };
+
+        const search = buildUrlParams(searchParams);   
+        
         const actualPath = subroute || route;
-        // Мы фактически на subroute, но в урле сохраняем page
         const correctedPath = safelyEncodePath(buildPathFromDotPath(actualPath));
-        return `${(correctedPath || '/')}?${search}`;
+        const url = `${(correctedPath || '/')}?${search}`;
+       
+        return url;
     };
     const correctedPath = safelyEncodePath(path);
     return (correctedPath || '/') + window.location.search;

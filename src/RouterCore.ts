@@ -9,15 +9,10 @@ import { proccessRoutes } from './utils';
 export type WrapperConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
 
 export type CoreRouter = Router & ListenersPluginOptions;
-
 export type CoreRouterState = State;
-
 export type CoreSubscribeFn = SubscribeFn;
-
 export type RouteDefinition = Route;
-
 export type CoreRoute = Route;
-
 export type CoreRouterListener = Listener;
 
 export type CreateRouterCoreOptions = {
@@ -38,12 +33,16 @@ const {
     useHash = false,
     persistentParams = [],
     autoCleanUp = false,
+    queryParamsMode,
+    queryParams,
     useQueryNavigation = true,
   } = config;
 
   const createRouterOptions: Partial<Options> = {
     defaultRoute,
     defaultParams,
+    queryParamsMode: useQueryNavigation ? 'default': queryParamsMode,
+    queryParams,
   };
 
   const browserPluginParams: BrowserPluginOptions = {

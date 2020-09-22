@@ -20,7 +20,7 @@ export const buildUrlParams = (params: URLParamsCollection) => {
     return query;
 };
 
-export const buildTokenStringForPath = (params: URLParamsCollection) => {
+const buildTokenStringForPath = (params: URLParamsCollection) => {
     const esc = encodeURIComponent;
     const query = Object.keys(params)
         .map(k => esc(k))

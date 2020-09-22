@@ -1,7 +1,7 @@
-import { PluginFactory, errorCodes, constants, Router, State } from 'router5'
-import safeBrowser from './browser'
-import { BrowserPluginOptions, CoreParams } from './types'
-import { buildUrlParams, getUrlParams, buildNestedParams } from './utils';
+import { PluginFactory, errorCodes, constants, Router, State, NavigationOptions } from 'router5';
+import safeBrowser from './browser';
+import { BrowserPluginOptions, CoreParams } from './types';
+import { buildUrlParams, getUrlParams } from './utils';
 import { checkSubroute, cleanParams } from '../../utils';
 
 declare module 'router5/dist/types/router' {
@@ -20,8 +20,6 @@ declare module 'router5/dist/types/router' {
         lastKnownState: State
     }
 }
-
-
 
 const defaultOptions: BrowserPluginOptions = {
     forceDeactivate: true,
@@ -56,49 +54,57 @@ function browserPluginFactory(
         // const routerAdd = router.add;
 
         router.sourceRoutes = opts.sourceRoutes;
-
-
+       
         router.disableUrlUpdate = (value: boolean) => {
             disableUrlUpdate = value;
         };  
 
-        router.go = (routeName: string, routeParams: Record<string, any>, options: any, done?: any) => {
-            const isSubRoute = checkSubroute(routeName, opts.sourceRoutes, opts.subRouteKey);
+        router.go = (routeName: string, routeParams: Record<string, any>, options: NavigationOptions, done?: any) => {
+            const isSubRoute = checkSubroute(routeName, opts.sourceRoutes, opts.subRouteKey || 'subRoute');
             const prevRoute = router.getState().name;
             const prevParams = cleanParams(router.getState().params);
             
             const coreParams: CoreParams = {
-              ...routeParams,
-              prevRoute,
+              route: routeName      
             };
-
-            if (isSubRoute) { 
-                coreParams.prevParams = prevParams;
-                coreParams.subRoute = routeName;
+            
+            if (routeParams && Object.keys(routeParams).length) {
+              coreParams.routeParams = { route: routeParams };
             }
-
+            
+            if (isSubRoute) { 
+                coreParams.route = prevRoute;
+                coreParams.subroute = routeName;
+                coreParams.prevParams = { ...prevParams.routeParams };
+                if (routeParams && Object.keys(routeParams).length) {
+                   coreParams.routeParams = { subroute: routeParams };
+                }
+            }
+            console.log('routerNavigate', routeName, coreParams, options, done);
             return routerNavigate(routeName, coreParams, options, done);
         }
         
 
         const buildUrl = (route: any, params: Record<string, any>) => {
-            const base = options.base || ''
-            const prefix = options.useHash ? `#${options.hashPrefix}` : ''
+            const base = options.base || '';
+            const prefix = options.useHash ? `#${options.hashPrefix}` : '';
             const path = router.buildPath(route, params);
             return base + prefix + path;
         }
         
-        const buildQueryUrl = (route: any, params: any) => {
-           const { prevRoute, prevParams = {}, subRoute, ...routeParams } = params;
-            
+        const buildQueryUrl = (routeName: any, params: any) => {
+           const { prevParams, routeParams, subroute, route } = params;
+           console.log('---->', params);
+           const routeParamsToRended = routeParams;
            const prevQuerySearch = buildUrlParams(prevParams);
-           const queryParams = buildUrlParams(routeParams);
+           const queryParams = buildUrlParams(routeParamsToRended);
+          
            const prevSearch = prevQuerySearch.length ? `&${prevQuerySearch}` : '';
            const search = queryParams.length ? `&${queryParams}`: '';
-           const url = subRoute
-                ?`?route=${prevRoute}${prevSearch}&subRoute=${route}${search}`
-                :`?route=${route}${search}`;
-            console.log('buildQueryUrl', params, url);
+           
+           const url = subroute
+                ?`/?route=${route}${prevSearch}&subroute=${routeName}${search}`
+                :`/?route=${routeName}${search}`;
             return url;
         }
 
@@ -117,9 +123,10 @@ function browserPluginFactory(
 
             const pathnamePart = pathParts[1] 
             const searchPart = pathParts[3] || ''
-            const { route, subRoute, ...searchData } = getUrlParams(searchPart);
-            const search = buildUrlParams(searchData)
-            const pathname = pathnamePart + (subRoute || route);
+            const { route, subroute, ...searchData } = getUrlParams(searchPart);
+            const search = buildUrlParams(searchData);
+            console.log('queryUrlToPath', url);
+            const pathname = pathnamePart + (subroute || route);
             return (
                 (options.base
                     ? pathname.replace(new RegExp('^' + options.base), '')
@@ -157,6 +164,7 @@ function browserPluginFactory(
 
         router.start = function(...args: any) {
             if (args.length === 0 || typeof args[0] === 'function') {
+                console.log('startlocation', browser.getLocation(options));
                 routerStart(browser.getLocation(options), ...args)
             } else {
                 routerStart(...args)

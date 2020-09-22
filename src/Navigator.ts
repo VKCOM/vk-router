@@ -1,5 +1,5 @@
-import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreRoute, CoreSubscribeFn } from './RouterCore';  
-import { getRouteData, proccessRoutes, checkSubroute, buildFakeHistory, cleanParams } from './utils'; 
+import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreSubscribeFn } from './RouterCore';  
+import { getRouteData, proccessRoutes, buildFakeHistory, cleanParams } from './utils'; 
 import { DoneFn } from 'router5/dist/types/base';
 import { NavigatorParams, NavigatorRoute } from './types';
 
@@ -82,12 +82,11 @@ export class Navigator {
     const initState = this.router.matchUrl(window.location.href); 
 
     if (initState) { 
-      const { name: route, path, params } = initState;
-      this.history = [{ route: name, subRoute: null, path, params }];
+      const { name: route, params } = initState;
+      this.history = [{ route: name, subRoute: null, params }];
       
       this.setState({
           route,
-          path,
           go: this.go,
           back: this.back,
           config,
@@ -113,13 +112,10 @@ export class Navigator {
 
   private syncNavigatorStateWithCore: CoreSubscribeFn = (state) => {
     const { route: coreState, previousRoute: prevCoreState } = state; 
-    const { name, params = {}, path } = coreState;  
+    const { name, params = {} } = coreState;  
     // генерируется из параметров просовываемых модулем browser в том случае если обновились на subroute
-    const prevCoreStateFromUrlParams = { name: params.prevRoute, params };
-    
+    const prevCoreStateFromUrlParams = { name: params.route, params };
     const { name: prevName, params: prevParams = {} } = prevCoreState || prevCoreStateFromUrlParams; 
-
-
     /**
      * Проверяем следующее состояние роутера
      * если следующий роут - это subroute текущего, то:
@@ -165,7 +161,7 @@ export class Navigator {
     if (isBack) {
       this.history.pop();
     } else {
-      this.history.push({ ...State, path });
+      this.history.push(State);
     }
 
     this.setState(State);
@@ -202,6 +198,10 @@ export class Navigator {
   }
 
   public go = (to: string, params?: any, options: any = {}, done?: any) => {
+    return this.router.go(to, params, options, done);
+  }
+
+  public navigate = (to: string, params?: any, options: any = {}, done?: any) => {
     return this.router.go(to, params, options, done);
   }
  

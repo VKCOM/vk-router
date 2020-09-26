@@ -1,6 +1,7 @@
 import React from 'react';   
-import { createNavigator, NavigatorState, CreateNavigatorOptions as NavigatorProps, NavigatorStatesToSubscriber } from './Navigator';
+import { createNavigator } from './Navigator';
 import { NavigatorContext } from './Context';
+import {  NavigatorState, NavigatorCreateOptions as NavigatorProps, NavigatorStatesToSubscriber } from './types';
  
 export default class Provider extends React.PureComponent<NavigatorProps> {
   public state: NavigatorState;

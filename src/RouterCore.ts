@@ -6,7 +6,7 @@ import { BrowserPluginOptions } from "./lib/browser-plugin/types";
 import { NavigatorRoute } from "./types";
 import { proccessRoutes } from './utils';
 
-export type WrapperConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
+export type CoreConfig = Partial<Options> & BrowserPluginOptions & ListenersPluginOptions & { persistentParams?: string[] };
 
 export type CoreRouter = Router & ListenersPluginOptions;
 export type CoreRouterState = State;
@@ -17,7 +17,7 @@ export type CoreRouterListener = Listener;
 
 export type CreateRouterCoreOptions = {
     routes: NavigatorRoute[];
-    config: WrapperConfig;
+    config: CoreConfig;
 }
 
 export type CreateRouterCore = (CreateRouterOptions: CreateRouterCoreOptions) => CoreRouter;
@@ -26,7 +26,7 @@ export const createRouterCore: CreateRouterCore = ({
     routes,
     config
 }) => {
-const {
+  const {
     defaultRoute = '/',
     defaultParams = {},
     base = '',

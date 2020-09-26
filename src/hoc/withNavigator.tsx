@@ -1,8 +1,8 @@
 import React from 'react';
-import { NavigatorState } from '../Navigator';
+import { NavigatorState } from '../types';
 import { NavigatorContext } from '../Context';
  
-export interface WithNavigator extends NavigatorState{
+export interface WithNavigator extends NavigatorState {
 }; 
 
 export function withNavigator<T>(Component: React.ComponentType<T>) { 

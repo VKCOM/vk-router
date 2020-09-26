@@ -175,4 +175,4 @@ export const buildFakeHistory = (config: NavigatorParams) => {
   }
 
 // очистка параметров идущих наружу
-export const cleanParams = ({ prevRoute, prevParams, isSubRoute, subroute, route, ...params }: NavigatorParams = {}) => params;
+export const cleanParams = ({ isSubRoute, subroute, route, ...params }: NavigatorParams = {}) => params;

@@ -42,19 +42,14 @@ const getLocation = (opts: any) => {
         : window.location.pathname.replace(new RegExp('^' + opts.base), '');
     
     if (opts.useQueryNavigation) {
-        const { route, subroute, routeParams } = getUrlParams(window.location.search);
-        const searchParams = subroute 
-          ? { route, subroute, ...routeParams }
-          : { route, ...routeParams };
-
-        const search = buildUrlParams(searchParams);   
-        
+        const params = getUrlParams(window.location.search);
+        const { route, subroute } = params;
+        const search = buildUrlParams(params);   
         const actualPath = subroute || route;
         const correctedPath = safelyEncodePath(buildPathFromDotPath(actualPath));
-        const url = `${(correctedPath || '/')}?${search}`;
-       
-        return url;
+        return `${(correctedPath || '/')}?${search}`;
     };
+
     const correctedPath = safelyEncodePath(path);
     return (correctedPath || '/') + window.location.search;
 }

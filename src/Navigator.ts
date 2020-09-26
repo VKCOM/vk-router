@@ -1,48 +1,17 @@
-import { createRouterCore, WrapperConfig as NavigatorConfig, CoreRouter, CoreSubscribeFn } from './RouterCore';  
+import { createRouterCore, CoreRouter, CoreSubscribeFn } from './RouterCore';  
 import { getRouteData, proccessRoutes, buildFakeHistory, cleanParams } from './utils'; 
-import { DoneFn } from 'router5/dist/types/base';
-import { NavigatorParams, NavigatorRoute } from './types';
 
-export interface CreateNavigatorOptions {
-  routes?: NavigatorRoute[];
-  config?: NavigatorConfig 
-}
+import { 
+  NavigatorRoute,
+  NavigatorState, 
+  NavigatorHistoryRecord,
+  NavigatorSubscriber,
+  NavigatorCreateOptions,
+  NavigatorConfig,
+  
+  CreateNavigatorOptions
+} from './types';
 
-export type CreateNavigator = (
-  options: CreateNavigatorOptions
-) => Navigator;
-
-export interface NavigatorSubRoutes {
-  [key:string]: any,
-} 
-
-export interface NavigatorHistoryRecord {
-  route?: string,
-  subRoute?: string,
-  path?: string,
-  subRouteParams?: NavigatorParams,     
-  params? : NavigatorParams
-}
-
-export interface NavigatorState {
-    route?: string,
-    path?: string,
-    subRoute?: string,
-    history?: NavigatorHistoryRecord[],
-    go?: Function,
-    back?: VoidFunction,
-    config?: NavigatorConfig,
-    params?: NavigatorParams,
-    subRouteParams?: NavigatorParams,
-    navigator?: Navigator,
-}
-
-export interface NavigatorStatesToSubscriber {
-  toState: NavigatorState; 
-  fromState: NavigatorState;
-}
-
-export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;
 
 interface NavigatorRouteProperties {
   [key:string]: any
@@ -62,12 +31,12 @@ export class Navigator {
   public routes: NavigatorRoute[] = [];
   public routeProperties: NavigatorRouteProperties = {};
   public config: NavigatorConfig = {};
-  
+  public isStarted = false;
 
   private subscribers: NavigatorSubscriber[] = [];  
   private router: CoreRouter;
 
-  constructor ({ routes, config }: CreateNavigatorOptions) { 
+  constructor ({ routes, config }: NavigatorCreateOptions) { 
     this.routes = routes;  
     this.config = config;
 
@@ -113,17 +82,8 @@ export class Navigator {
   private syncNavigatorStateWithCore: CoreSubscribeFn = (state) => {
     const { route: coreState, previousRoute: prevCoreState } = state; 
     const { name, params = {} } = coreState;  
-    // генерируется из параметров просовываемых модулем browser в том случае если обновились на subroute
     const prevCoreStateFromUrlParams = { name: params.route, params };
     const { name: prevName, params: prevParams = {} } = prevCoreState || prevCoreStateFromUrlParams; 
-    /**
-     * Проверяем следующее состояние роутера
-     * если следующий роут - это subroute текущего, то:
-     * route =  остается тем же самым
-     * subroute = устанавливается в текущее значениe
-     * если предыдущий роут - тоже subrout
-     * то оставляем текущий роут
-     */
 
     const routeData = getRouteData(name, this.routes);
     const prevRouteIsSubRoute = this.state.subRoute === prevName; 
@@ -136,19 +96,14 @@ export class Navigator {
       : name;
 
     const subRoute = isSubRoute 
-    ?  params.subroute 
       ? params.subroute 
-      : name 
-    : null;
-  
-    const subRouteParams = isSubRoute 
-    ? cleanParams(params) 
-    : null;
-  
-    const routeParams = isSubRoute 
-      ? cleanParams(prevParams) 
-      : cleanParams(params);
-     
+        ? params.subroute 
+        : name 
+      : null;
+
+    const routeParams = isSubRoute ? cleanParams(prevParams.routeParams) : cleanParams(params.routeParams);
+    const subRouteParams = isSubRoute ? cleanParams(params) : {};
+
     const isBack = state && this.prevState && this.prevState.route === name;
      
     const State: NavigatorState = {
@@ -209,13 +164,15 @@ export class Navigator {
     window.history.back();
   };
 
-  public start = async (...args: DoneFn[]) => {
+  public start = async (...args: any[]) => {
      await this.router.start(...args);
+     this.isStarted = true;
      this.broadCastState();
   }
 
   public stop = () => { 
-     this.router.stop()
+    this.isStarted = false;
+    this.router.stop();
   } 
   
   public getState = () => {
@@ -226,6 +183,11 @@ export class Navigator {
     return this.prevState;
   }
 }
+
+
+export type CreateNavigator = (
+  options: CreateNavigatorOptions
+) => Navigator;
 
 export const createNavigator: CreateNavigator = ({
   routes, 

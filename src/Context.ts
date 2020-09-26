@@ -1,4 +1,4 @@
 import React from "react";
-import { NavigatorState } from './Navigator';
+import { NavigatorState } from './types';
 
 export const NavigatorContext = React.createContext<Partial<NavigatorState>>({});

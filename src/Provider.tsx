@@ -16,9 +16,8 @@ export default class Provider extends React.PureComponent<NavigatorProps> {
     this.state = {...initialState};
   }
 
-  private readonly onNavigatorChange = ({ toState }: NavigatorStatesToSubscriber) => {  
-    //console.log('onNavigatorChange:::', toState);
-    this.setState({...toState});
+  private readonly onNavigatorChange = ({ toState }: NavigatorStatesToSubscriber) => { 
+    this.setState({ ...toState });
   };
      
   public render() {

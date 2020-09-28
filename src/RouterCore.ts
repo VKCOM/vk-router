@@ -1,8 +1,8 @@
 import { createRouter, Options, Route, Router, State, SubscribeFn } from "router5";
 import listenersPlugin, { ListenersPluginOptions, Listener } from "router5-plugin-listeners";
 import persistentParamsPlugin from 'router5-plugin-persistent-params'; 
-import browserPlugin from './lib/browser-plugin';
-import { BrowserPluginOptions } from "./lib/browser-plugin/types";
+import browserPlugin from './plugin';
+import { BrowserPluginOptions } from "./plugin/types";
 import { NavigatorRoute } from "./types";
 import { proccessRoutes } from './utils';
 

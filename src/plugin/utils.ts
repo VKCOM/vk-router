@@ -29,14 +29,17 @@ export const getUrlParams = (url: string) => {
   return decodedQueryString;
 }
 
-export const restoreParams = (params: Record<string, any>) => {
+export const restoreParams = (params: any) => {
     if(!params || typeof params !== 'object'){
-      return '';
+      return {};
     }
-    const restoredParams: Record<string, any> = {};
+
+    const restoredParams: any = {};
+    
     for (const [keyOrPath, value] of Object.entries(params)) {
       set(restoredParams, keyOrPath, value);
     }
+    
     return restoredParams;
 }
 

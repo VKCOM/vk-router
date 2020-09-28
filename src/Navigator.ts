@@ -1,6 +1,6 @@
 import { createRouterCore, CoreRouter, CoreSubscribeFn } from './RouterCore';  
-import { getRouteData, proccessRoutes, buildFakeHistory, cleanParams } from './utils'; 
-
+import { getRouteData, proccessRoutes, buildFakeHistory, getRouteParams } from './utils'; 
+import { restoreParams } from './plugin/utils';
 import { 
   NavigatorRoute,
   NavigatorState, 
@@ -56,15 +56,15 @@ export class Navigator {
       
       this.setState({
           route,
-          go: this.go,
-          back: this.back,
           config,
           params,
+          go: this.go,
+          back: this.back,
           navigator: this,
       });
     }  
 
-    buildFakeHistory(this.config);
+    buildFakeHistory(this.config, this.routes);
   } 
 
   private broadCastState = () => {
@@ -74,23 +74,27 @@ export class Navigator {
   }
   
   private setState = (state: Partial<NavigatorState>) => {
-    this.prevState = {...this.state};
-    this.state = {...this.state, ...state };
+    this.prevState = { ...this.state };
+    this.state = { ...this.state, ...state };
     this.broadCastState();
   }
 
   private syncNavigatorStateWithCore: CoreSubscribeFn = (state) => {
-    const { route: coreState, previousRoute: prevCoreState } = state; 
+    const { 
+      route: coreState, 
+      previousRoute: prevCoreState } = state; 
     const { name, params = {} } = coreState;  
-    const prevCoreStateFromUrlParams = { name: params.route, params };
-    const { name: prevName, params: prevParams = {} } = prevCoreState || prevCoreStateFromUrlParams; 
 
+    const prevCoreStateFromUrlParams = { name: params.route, params };
+
+    const { name: prevName, params: prevParams = {} } = prevCoreState || prevCoreStateFromUrlParams; 
+    
     const routeData = getRouteData(name, this.routes);
-    const prevRouteIsSubRoute = this.state.subRoute === prevName; 
     const isSubRoute = (routeData && routeData.subRoute) || !!params.subroute;
+    const isSubRoutePrevRoute = this.state.subRoute === prevName; 
     
     const route = isSubRoute 
-      ? prevRouteIsSubRoute 
+      ? isSubRoutePrevRoute 
         ? this.state.route 
         : prevName
       : name;
@@ -101,17 +105,24 @@ export class Navigator {
         : name 
       : null;
 
-    const routeParams = isSubRoute ? cleanParams(prevParams.routeParams) : cleanParams(params.routeParams);
-    const subRouteParams = isSubRoute ? cleanParams(params) : {};
+    const restoredPrevParams = restoreParams(prevParams);
+    const restoredParams = restoreParams(params);
+    const cleanedPrevRouteParams = getRouteParams(restoredPrevParams).route || {};
+    const cleanedRouteParams = getRouteParams(restoredParams).route || {};
+    const cleanedSubRouteParams = getRouteParams(restoredParams).subroute || {};
+
+    const routeParams = isSubRoute ? cleanedPrevRouteParams : cleanedRouteParams;
+    const subRouteParams = cleanedSubRouteParams;
 
     const isBack = state && this.prevState && this.prevState.route === name;
      
+    const prevHistoryState = this.history[this.history.length - 1];
     const State: NavigatorState = {
       route,
       subRoute, 
       subRouteParams,     
       params: routeParams,
-    }
+    };
   
     if (isBack) {
       this.history.pop();
@@ -149,7 +160,8 @@ export class Navigator {
   }
 
   public remove = (route: string) => {
-    
+    // TODO: implement remove method
+    console.log('route to remove', route);
   }
 
   public go = (to: string, params?: any, options: any = {}, done?: any) => {
@@ -161,13 +173,18 @@ export class Navigator {
   }
  
   public back: VoidFunction = () => {
-    window.history.back();
+    const { route, subRoute, subRouteParams, params } = this.getPrevState();
+    this.router.goBack();
   };
 
-  public start = async (...args: any[]) => {
-     await this.router.start(...args);
-     this.isStarted = true;
-     this.broadCastState();
+  public start = (...args: any[]) => {
+     Promise.resolve(this.router.start(...args))
+     .then(() => {
+      this.isStarted = true;
+      this.broadCastState();
+     })
+
+     return this;
   }
 
   public stop = () => { 

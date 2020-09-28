@@ -1,8 +1,8 @@
 import { PluginFactory, errorCodes, constants, Router, State, NavigationOptions } from 'router5';
 import safeBrowser from './browser';
-import { BrowserPluginOptions, CoreParams } from './types';
-import { buildUrlParams, getUrlParams } from './utils';
-import { checkSubroute, cleanParams } from '../../utils';
+import { BrowserPluginOptions, CoreParams, HistoryRecord } from './types';
+import { buildUrlParams, getUrlParams, restoreParams } from './utils';
+import { getRouteData } from '../utils';
 
 declare module 'router5/dist/types/router' {
     interface Router {
@@ -10,7 +10,8 @@ declare module 'router5/dist/types/router' {
         buildUrl(name: string, params?: { [key: string]: any }): string
         matchUrl(url: string): State | null
         buildQueryUrl(name: string, params?: { [key: string]: any }): string,
-        go(routeName: string, routeParams: Record<string, any>, options: any, done?: any): any,      
+        go(routeName: string, routeParams: Record<string, any>, options?: any, done?: any): any,
+        goBack(): any,      
         sourceRoutes: Record<string, any>[],
         replaceHistoryState(
             name: string,
@@ -33,25 +34,27 @@ const defaultOptions: BrowserPluginOptions = {
     subRouteKey: 'subRoute',
 }
 
-const source = 'popstate'
+const source = 'popstate';
 
 function browserPluginFactory(
     opts?: BrowserPluginOptions,
-    browser = safeBrowser // коллекция роутов с доп данными
+    browser = safeBrowser
 ): PluginFactory {
     const options: BrowserPluginOptions = { ...defaultOptions, ...opts }
     const transitionOptions = {
         forceDeactivate: options.forceDeactivate,
         source
     }
-    let removePopStateListener:any
+    let removePopStateListener: any;
     let disableUrlUpdate = false;
+    let prevRoute: string;
+    let prevParams: any;
+    const history: HistoryRecord[] = [];
 
     return function browserPlugin(router: Router) {
         const routerOptions = router.getOptions();
         const routerStart = router.start;
         const routerNavigate = router.navigate;
-        // const routerAdd = router.add;
 
         router.sourceRoutes = opts.sourceRoutes;
        
@@ -59,10 +62,23 @@ function browserPluginFactory(
             disableUrlUpdate = value;
         };  
 
-        router.go = (routeName: string, routeParams: Record<string, any>, options: NavigationOptions, done?: any) => {
-            const isSubRoute = checkSubroute(routeName, opts.sourceRoutes, opts.subRouteKey || 'subRoute');
-            const prevRoute = router.getState().name;
-            const prevParams = cleanParams(router.getState().params);
+        router.go = (routeName: string, routeParams: Record<string, any>, options?: NavigationOptions, done?: any) => {
+            const currentRoute = router.getState().name;
+            const currentParams = (restoreParams(router.getState().params) || {}).routeParams;
+            
+            const routeData: Record<string,any> = getRouteData(routeName, opts.sourceRoutes);
+            const currentRouteData: Record<string,any> = getRouteData(currentRoute, opts.sourceRoutes);
+
+            const isSubRoute = routeData && routeData[opts.subRouteKey || 'subRoute']; 
+            const isSubRouteCurrentRoute = currentRouteData && currentRouteData[opts.subRouteKey || 'subRoute'];
+            const updateUrl = routeData && routeData.updateUrl;
+            
+            if (updateUrl === false) {
+              router.disableUrlUpdate(true);
+            }
+
+            prevRoute = isSubRouteCurrentRoute ? (prevRoute || currentRoute) : currentRoute;
+            prevParams = isSubRouteCurrentRoute ? (prevParams || currentParams) : currentParams;
             
             const coreParams: CoreParams = {
               route: routeName      
@@ -74,16 +90,44 @@ function browserPluginFactory(
             
             if (isSubRoute) { 
                 coreParams.route = prevRoute;
-                coreParams.subroute = routeName;
-                coreParams.prevParams = { ...prevParams.routeParams };
-                if (routeParams && Object.keys(routeParams).length) {
-                   coreParams.routeParams = { subroute: routeParams };
+
+                if (prevParams && Object.keys(prevParams).length) {
+                  coreParams.routeParams = {
+                      ...prevParams,
+                  };
                 }
+
+                coreParams.subroute = routeName;
+                  
+                if (routeParams && Object.keys(routeParams).length) {
+                  coreParams.routeParams = { 
+                    ...prevParams,  
+                    subroute: routeParams 
+                  };
+                }
+            } 
+            const isBack = prevRoute === routeName;
+            if(isBack){
+                history.pop();
+            } else {
+                history.push(coreParams)
             }
-            console.log('routerNavigate', routeName, coreParams, options, done);
             return routerNavigate(routeName, coreParams, options, done);
         }
         
+        router.goBack = () => {
+            if (prevRoute) {
+                const prevHistoryState = history[history.length - 1];
+                console.log('prevHistoryState', prevHistoryState, prevParams);
+              if (prevHistoryState) {
+                router.go(prevHistoryState.route, {});
+              } else {
+                window.history.back();
+              }
+            } else {
+              window.history.back();
+            }
+        }
 
         const buildUrl = (route: any, params: Record<string, any>) => {
             const base = options.base || '';
@@ -92,20 +136,10 @@ function browserPluginFactory(
             return base + prefix + path;
         }
         
-        const buildQueryUrl = (routeName: any, params: any) => {
-           const { prevParams, routeParams, subroute, route } = params;
-           console.log('---->', params);
-           const routeParamsToRended = routeParams;
-           const prevQuerySearch = buildUrlParams(prevParams);
-           const queryParams = buildUrlParams(routeParamsToRended);
-          
-           const prevSearch = prevQuerySearch.length ? `&${prevQuerySearch}` : '';
-           const search = queryParams.length ? `&${queryParams}`: '';
-           
-           const url = subroute
-                ?`/?route=${route}${prevSearch}&subroute=${routeName}${search}`
-                :`/?route=${routeName}${search}`;
-            return url;
+        const buildQueryUrl = (_: any, params: any) => {
+          const queryParams = buildUrlParams(params);
+          const search = queryParams.length ? `${queryParams}`: '';
+          return `/?${search}`;
         }
 
         router.buildUrl = options.useQueryNavigation ? buildQueryUrl : buildUrl;
@@ -123,15 +157,13 @@ function browserPluginFactory(
 
             const pathnamePart = pathParts[1] 
             const searchPart = pathParts[3] || ''
-            const { route, subroute, ...searchData } = getUrlParams(searchPart);
-            const search = buildUrlParams(searchData);
-            console.log('queryUrlToPath', url);
+            const { route, subroute, routeParams } = getUrlParams(searchPart);
+            const search = buildUrlParams({ route, subroute, routeParams });
             const pathname = pathnamePart + (subroute || route);
-            return (
-                (options.base
-                    ? pathname.replace(new RegExp('^' + options.base), '')
-                    : pathname) + search
-            )
+            const urlPath = (options.base
+                ? pathname.replace(new RegExp('^' + options.base), '')
+                : pathname) + `?${search}`; 
+            return urlPath;
         }
 
         const urlToPath = (url: string) => {
@@ -163,14 +195,13 @@ function browserPluginFactory(
         router.matchUrl = (url: any) => router.matchPath(currentUrl(url))
 
         router.start = function(...args: any) {
-            if (args.length === 0 || typeof args[0] === 'function') {
-                console.log('startlocation', browser.getLocation(options));
-                routerStart(browser.getLocation(options), ...args)
-            } else {
-                routerStart(...args)
-            }
+          if (args.length === 0 || typeof args[0] === 'function') {
+            routerStart(browser.getLocation(options), ...args);
+          } else {
+            routerStart(...args)
+          }
 
-            return router
+          return router
         }
 
         router.replaceHistoryState = function(name: any, params = {}, title = '') {
@@ -202,13 +233,11 @@ function browserPluginFactory(
 
             if (replace) browser.replaceState(finalState, '', url)
             else browser.pushState(finalState, '', url)
-            
         }
 
         function onPopState(evt: PopStateEvent) {
-            const routerState = router.getState()
-            // Do nothing if no state or if last know state is poped state (it should never happen)
-            const newState = !evt.state || !evt.state.name
+            const routerState = router.getState();
+            const newState = !evt.state || !evt.state.name;
             const state = newState
                 ? router.matchPath(browser.getLocation(options), source)
                 : router.makeState(
@@ -221,21 +250,19 @@ function browserPluginFactory(
             const { defaultRoute, defaultParams } = routerOptions
 
             if (!state) {
-                // If current state is already the default route, we will have a double entry
-                // Navigating back and forth will emit SAME_STATES error
                 defaultRoute &&
                     router.navigateToDefault({
                         ...transitionOptions,
                         reload: true,
                         replace: true
                     })
-                return
+                return;
             }
             if (
                 routerState &&
                 router.areStatesEqual(state, routerState, false)
             ) {
-                return
+                return;
             }
 
             router.transitionToState(
@@ -259,13 +286,13 @@ function browserPluginFactory(
                                 routerState.params
                             )
                             if (!newState) {
-                                // Keep history state unchanged but use current URL
-                                updateBrowserState(state, url, true)
+                                if(disableUrlUpdate){
+                                    router.disableUrlUpdate(false);
+                                } else {
+                                    updateBrowserState(state, url, true) 
+                                }
                             }
-                            // else do nothing or history will be messed up
-                            // TODO: history.back()?
                         } else {
-                            // Force navigation to default state
                             defaultRoute &&
                                 router.navigate(defaultRoute, defaultParams, {
                                     ...transitionOptions,
@@ -287,14 +314,13 @@ function browserPluginFactory(
 
         function onStart() {
             if (options.useHash && !options.base) {
-                // Guess base
-                options.base = browser.getBase()
+                options.base = browser.getBase();
             }
 
             removePopStateListener = browser.addPopstateListener(
                 onPopState,
                 options
-            )
+            );
         }
 
         function teardown() {

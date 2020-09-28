@@ -9,6 +9,7 @@ export interface BrowserPluginOptions {
     preserveHash?: boolean
     useQueryNavigation?: boolean;
     sourceRoutes?: any[],
+    defaultPath?: string,
     subRouteKey?: string,
 }
 
@@ -26,10 +27,23 @@ export interface HistoryState extends State {
     [key: string]: any
 }
 
-export interface URLParamsCollection {
-    [key: string]: any
+export interface CoreParams {
+    [key: string]: any,
+    route: string;
+    subroute?: string;
+    routeParams?: {
+        route?: {
+          [key: string]: any;
+        },
+        subroute?: {
+          [key: string]: any;
+        }
+    }
 }
 
-export interface CoreParams {
-  [key: string]: any;
+export interface HistoryRecord extends CoreParams {
+}
+
+export interface URLParamsCollection {
+    [key: string]: any
 }

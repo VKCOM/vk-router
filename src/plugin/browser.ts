@@ -45,13 +45,16 @@ const getLocation = (opts: any) => {
         const params = getUrlParams(window.location.search);
         const { route, subroute } = params;
         const search = buildUrlParams(params);   
-        const actualPath = subroute || route;
+        const actualPath = subroute || route || opts.defaultPath;
         const correctedPath = safelyEncodePath(buildPathFromDotPath(actualPath));
+      
         return `${(correctedPath || '/')}?${search}`;
     };
 
     const correctedPath = safelyEncodePath(path);
-    return (correctedPath || '/') + window.location.search;
+    const startPath = (correctedPath || '/') + window.location.search;
+    console.log('startPath', startPath);
+    return startPath;
 }
 
 const safelyEncodePath = (path: any) => {

@@ -1,24 +1,22 @@
 import { URLParamsCollection, NavigatorRoute, NavigatorParams } from './types';
-import { ERROR_INVALID_PARAMS } from './constants';
-import { CoreRoute } from './RouterCore';  
 
-export const getUrlParams = (url: string) => {
-    const hashes = url.slice(url.indexOf('?') + 1).split('&');
-    const params: URLParamsCollection = {};
-    hashes.forEach((hash: string) => {
-      const [key, val] = hash.split('=');
-      params[key] = decodeURIComponent(val);
-    })
-    return params;
-}
+// export const _getUrlParams = (url: string) => {
+//     const hashes = url.slice(url.indexOf('?') + 1).split('&');
+//     const params: URLParamsCollection = {};
+//     hashes.forEach((hash: string) => {
+//       const [key, val] = hash.split('=');
+//       params[key] = decodeURIComponent(val);
+//     })
+//     return params;
+// }
 
-export const buildUrlParams = (params: URLParamsCollection) => {
-    const esc = encodeURIComponent;
-    const query = Object.keys(params)
-      .map(k => esc(k) + '=' + esc(params[k]))
-      .join('&');
-    return query;
-};
+// export const _buildUrlParams = (params: URLParamsCollection) => {
+//     const esc = encodeURIComponent;
+//     const query = Object.keys(params)
+//       .map(k => esc(k) + '=' + esc(params[k]))
+//       .join('&');
+//     return query;
+// };
 
 const buildTokenStringForPath = (params: URLParamsCollection) => {
     const esc = encodeURIComponent;
@@ -34,36 +32,6 @@ const buildTokenStringForPath = (params: URLParamsCollection) => {
 
 export const getTarget = (path: string) => path ? path.split('.').reverse()[0] : '';
 
-export const getRouteData = (path:string, routes: NavigatorRoute[]): NavigatorRoute | null => {
-    const pathSegments = path.split('.');   
-    let routeData = null; 
-    let pathSegmentIndex = 0;
-    const target = pathSegments[pathSegments.length - 1];
-
-    const lookForSegment = (routes: NavigatorRoute[])=> {
-      for(let i = 0; i < routes.length; ++i){
-        const route = routes[i];
-        const pathName = pathSegments[pathSegmentIndex];
-        if(route.name === pathName){
-          if(route.name === target){
-            routeData = route;
-            break;
-          }
-
-          if(Array.isArray(route.children)){
-            pathSegmentIndex += 1;
-            lookForSegment(route.children);
-          }
-          break;
-        }
-      };
-    };
-
-    lookForSegment(routes);
-
-    return routeData;
-}
-
 export const iterateRouteTree = (routes:NavigatorRoute[], callback: (el:NavigatorRoute, index: number) => any) => {
   if(Array.isArray(routes)){
     routes.forEach((el, index) => {
@@ -75,18 +43,6 @@ export const iterateRouteTree = (routes:NavigatorRoute[], callback: (el:Navigato
   }
 } 
 
-export const checkSubroute = (to: string, routes: NavigatorRoute[], subrouteKey: string) => {
-    let result = false;
-    const target = getTarget(to); 
-    const callback = (route :NavigatorRoute) => { 
-      if(route.name === target && route[subrouteKey]){
-        result = true;
-      }
-    };
-    iterateRouteTree(routes, callback);
-    return result;
-};
-
 export const getParentRoute = (path: string): string => {
   const resultArr = path.split('.');
   resultArr.pop();
@@ -94,25 +50,13 @@ export const getParentRoute = (path: string): string => {
 }
 
 export const validateParams = (params: NavigatorParams) => {
-    return true;
-  } 
+  return true;
+} 
 
 export const buildPathForRoute = (name: string, params: NavigatorParams) => {
-  if(!validateParams(params)){
-    throw new Error(ERROR_INVALID_PARAMS);
-  }
   return `/${name}${buildTokenStringForPath(params)}`;
 }
-
-export const proccessRoutes = (routes: NavigatorRoute[]): CoreRoute[] => {   
-  iterateRouteTree(routes, (route:NavigatorRoute) =>{
-    const { name, params = {}, path: routePath } = route;
-    const path = routePath || buildPathForRoute(name, params);  
-    route.path = path;
-  });
-  return routes as CoreRoute[];
-}
-
+  
 export const treeIncludes = (routes: NavigatorRoute[], name: string) => {
   let result = false;
   iterateRouteTree(routes, (route :NavigatorRoute) => { 
@@ -129,7 +73,7 @@ export const buildFakeHistory = (config: NavigatorParams, routes: NavigatorRoute
       const { origin, hash, pathname, search } = window.location; 
       
       if (config.useQueryNavigation) {
-        const { route, subroute, ...queryParams } = getUrlParams(search);
+        const { route, subroute, ...queryParams } = getQueryParams(search);
         let pathQuery = '';
         let baseRoute = '';
 
@@ -137,7 +81,7 @@ export const buildFakeHistory = (config: NavigatorParams, routes: NavigatorRoute
           const segments = route.split('.'); 
           const paths = segments.filter((segment: string) => treeIncludes(routes, segment));
           paths.forEach((path: string) => {
-            const searchPath = buildUrlParams({
+            const searchPath = buildQueryParams({
               route: pathQuery += (pathQuery.length ? `.${path}`: path),
               ...queryParams
             })
@@ -153,7 +97,7 @@ export const buildFakeHistory = (config: NavigatorParams, routes: NavigatorRoute
           let subPathQuery = '';
 
           paths.forEach((subpath: string) => {
-            const searchPath = buildUrlParams({
+            const searchPath = buildQueryParams({
               subroute: subPathQuery += (subPathQuery.length ? `.${subpath}`: subpath),
               ...queryParams
             })
@@ -175,4 +119,113 @@ export const buildFakeHistory = (config: NavigatorParams, routes: NavigatorRoute
     }
   }
 
-export const getRouteParams = ({ routeParams }: NavigatorParams = {}) => routeParams || {};
+export const isObject = (obj: any) => (typeof obj === "object" || typeof obj === 'function') && (obj !== null);
+
+export const set = (obj: Record<string, any>, path: string, value: any) => {
+  const pList = Array.isArray(path) ? path : path ? path.split('.') : [];
+  const len = pList.length;
+
+  for (let i = 0; i < len - 1; i++) {
+    const elem = pList[i];
+    if (!obj[elem] || !isObject(obj[elem])) {
+      obj[elem] = {} as Record<string, any>;
+    }
+    obj = obj[elem];
+  }
+
+  obj[pList[len - 1]] = value;
+};
+
+export const getQueryParams = (path: string) => { 
+  const decodedQueryString: Record<string, any> = {};
+  const processedString = path && path.includes('?') ? path.slice(path.indexOf('?') + 1) : '';
+  if(!processedString.length){
+    return decodedQueryString;
+  };
+  const queryStringPieces = processedString ? processedString.split("&") : [];
+  
+  for (const piece of queryStringPieces) {
+    let [key, value] = piece.split("=");
+    value = value || "";
+    set(decodedQueryString, key, value);
+  }
+
+  return decodedQueryString;
+}
+
+// TODO
+export const getUrlParams = (url: string) => { 
+  const decodedQueryString: Record<string, any> = {};
+  const processedString =  url.slice(url.indexOf('?') + 1);
+  if(!processedString.length){
+    return decodedQueryString;
+  };
+  const queryStringPieces = processedString ? processedString.split("&") : [];
+  
+  for (const piece of queryStringPieces) {
+    let [key, value] = piece.split("=");
+    value = value || "";
+     
+    set(decodedQueryString, key, value);
+  }
+
+  return decodedQueryString;
+}
+
+export const buildQueryParams = (queryObj: Record<string, any> | string, nested: string = "") => {
+  if(!queryObj || typeof queryObj !== 'object'){
+    return '';
+  }
+
+  const pairs: any[] = Object.entries(queryObj).map(([key, val]) => {
+      if (typeof val === "object") {
+        return buildQueryParams(val, nested + `${key}.`);
+      } else {
+        return [nested + key, val].map(escape).join("=");
+      }
+  }).filter(el => el);
+  return pairs.join("&");
+};
+
+// TODO
+export const buildUrlParams = (queryObj: Record<string, any> | string, nested: string = "") => {
+  if(!queryObj || typeof queryObj !== 'object'){
+    return '';
+  }
+
+  const pairs: any[] = Object.entries(queryObj).map(([key, val]) => {
+      if (typeof val === "object") {
+        return buildQueryParams(val, nested + `${key}.`);
+      } else {
+        return [nested + key, val].map(escape).join("=");
+      }
+  });
+
+  return pairs.join("&");
+};
+
+export const buildPathFromDotPath = (path: string) => path ? '/'+ path.split('.').join('/') : '';
+
+export const urlToPath = (url: string, options: any) => {
+  const match = url.match(
+      /^(?:http|https):\/\/(?:[0-9a-z_\-.:]+?)(?=\/)(.*)$/
+  )
+  const path = match ? match[1] : url;
+
+  const pathParts = path.match(/^(.+?)(#.+?)?(\?.+)?$/)
+
+  if (!pathParts)
+      throw new Error(`[router5] Could not parse url ${url}`)
+
+  const pathname = pathParts[1]
+  const hash = pathParts[2] || ''
+  const search = pathParts[3] || ''
+
+  return (
+      (options.useHash
+          ? hash.replace(new RegExp('^#' + options.hashPrefix), '')
+          : options.base
+          ? pathname.replace(new RegExp('^' + options.base), '')
+          : pathname) + search
+  )
+};

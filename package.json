@@ -29,9 +29,6 @@
     "@types/react": "^16.9.44",
     "@types/react-dom": "^16.9.8",
     "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "router5": "^8.0.1",
-    "router5-plugin-listeners": "^8.0.1",
-    "router5-plugin-persistent-params": "^8.0.1"
+    "react-dom": "^16.13.1"
   }
 }

@@ -1,12 +1,32 @@
-import { CoreConfig } from './RouterCore';
+export interface NavigatorConfig {
+  defaultRoute: string;
+  base?: string;
+  useHash?: boolean;
+  persistentParams?: string[];
+  useQueryNavigation?: boolean;
+  subRouteKey?: string; 
+  routeKey?: string;
+}
 
 export interface URLParamsCollection {
-    [key: string]: any
+  [key: string]: any
 }
 
 export interface NavigatorParams {
-    [key:string]: any,
+  [key:string]: any,
+  route?: {
+    [key: string]: any;
+  },
+  subroute?: {
+    [key: string]: any;
+  }
 } 
+
+export interface NavigatorOptions {
+  [key: string]: any;
+  replace?: boolean;
+  reload?: boolean;
+}
 
 export interface CreateNavigatorOptions {
   routes?: NavigatorRoute[];
@@ -14,17 +34,15 @@ export interface CreateNavigatorOptions {
 }
 
 export interface NavigatorRoute {
-    [key: string]: any,
-    name: string;
-    path?: string;
-    params?: NavigatorParams;
-    subRoute?: boolean;
-    updateUrl?: boolean;
-    title?: string;
-    children?: NavigatorRoute[],
+  [key: string]: any,
+  name: string;
+  path?: string;
+  params?: NavigatorParams;
+  subRoute?: boolean;
+  updateUrl?: boolean;
+  title?: string;
+  children?: NavigatorRoute[],
 }
-
-export type NavigatorConfig = CoreConfig;
 
 export interface NavigatorCreateOptions {
   routes?: NavigatorRoute[];
@@ -39,25 +57,19 @@ export interface NavigatorSubRoutes {
   [key:string]: any,
 } 
 
-export interface NavigatorHistoryRecord {
-  route?: string,
-  subRoute?: string,
-  path?: string,
-  subRouteParams?: NavigatorParams,     
-  params? : NavigatorParams
+export interface NavigatorHistoryRecord extends NavigatorState {
 }
 
 export interface NavigatorState {
-    route?: string,
-    path?: string,
-    subRoute?: string,
-    history?: NavigatorHistoryRecord[],
-    go?: Function,
-    back?: VoidFunction,
-    config?: NavigatorConfig,
-    params?: NavigatorParams,
-    subRouteParams?: NavigatorParams,
-    navigator?: any,
+  route: string,
+  subroute?: string,
+  path?: string,
+  history?: NavigatorHistoryRecord[],
+  go?: Function,
+  back?: VoidFunction,
+  config?: NavigatorConfig,
+  params: NavigatorParams,
+  navigator?: any,
 }
 
 export interface NavigatorStatesToSubscriber {
@@ -66,3 +78,20 @@ export interface NavigatorStatesToSubscriber {
 }
 
 export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;
+ 
+export interface Browser {
+  getBase(): string
+  pushState(state: HistoryState, title: string | null, path: string): void
+  replaceState(state: HistoryState, title: string | null, path: string): void
+  addPopstateListener(fn: any, opts: any): any
+  getLocation(opts: NavigatorConfig): string
+  getState(): HistoryState
+  getHash(): string
+}
+
+export interface HistoryState {
+  [key: string]: any
+}
+  
+export interface HistoryRecord extends NavigatorState {
+}

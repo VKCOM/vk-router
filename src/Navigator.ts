@@ -1,6 +1,14 @@
-import { createRouterCore, CoreRouter, CoreSubscribeFn } from './RouterCore';  
-import { getRouteData, proccessRoutes, buildFakeHistory, getRouteParams } from './utils'; 
-import { restoreParams } from './plugin/utils';
+import { createRoutesTree } from './tree/Tree';
+import {
+  buildFakeHistory, 
+  // buildUrlParams, 
+  // getUrlParams,
+
+  buildQueryParams,
+  getQueryParams, 
+
+  urlToPath,
+} from './utils';
 import { 
   NavigatorRoute,
   NavigatorState, 
@@ -9,67 +17,102 @@ import {
   NavigatorCreateOptions,
   NavigatorConfig,
   
-  CreateNavigatorOptions
-} from './types';
+  CreateNavigatorOptions, NavigatorOptions, NavigatorParams
+} from './types'; 
 
+import { ERROR_NO_ROUTES, ERROR_HAS_TO_BE_ROUTE, ERROR_TREE_NO_ROUTE } from './constants';
+import browser from './browser';
+import TreeRoutes from './tree/Tree';
 
 interface NavigatorRouteProperties {
   [key:string]: any
 }
 
-const defaultConfig: NavigatorConfig = {    
-  base: ".",
+const defaultConfig: NavigatorConfig = { 
   defaultRoute: '/',
-  useHash: false,  
+  base: '',
+  useHash: false, 
+  useQueryNavigation: true,
+  subRouteKey: 'subRoute',
+  routeKey: 'route',
 };
 
+/**
+ *  class Navigator
+ */
 export class Navigator {
-
-  public state: NavigatorState = {};
-  public prevState: NavigatorState = {};
-  public history:NavigatorHistoryRecord[] = [];
+  public state: NavigatorState;
+  public prevState: NavigatorState;
+  public defaultState: NavigatorState;
+  public history: NavigatorHistoryRecord[] = [];
   public routes: NavigatorRoute[] = [];
   public routeProperties: NavigatorRouteProperties = {};
-  public config: NavigatorConfig = {};
+  public config: NavigatorConfig = defaultConfig;
   public isStarted = false;
 
-  private subscribers: NavigatorSubscriber[] = [];  
-  private router: CoreRouter;
+  public tree: TreeRoutes;
+
+  private subscribers: NavigatorSubscriber[] = [];   
+
+  private removePopStateListener: VoidFunction;
 
   constructor ({ routes, config }: NavigatorCreateOptions) { 
     this.routes = routes;  
-    this.config = config;
+    this.config = { ...defaultConfig, ...config };
 
-    this.router = createRouterCore({
-      routes: this.routes, 
-      config: this.config
-    }); 
+    this.tree = createRoutesTree(this.routes); 
 
-    this.router.subscribe(this.syncNavigatorStateWithCore); 
-    this.router.start();
+    let firstRouteName = (this.routes[0] || {}).name; 
 
-    const initState = this.router.matchUrl(window.location.href); 
+    this.defaultState = {
+      route: this.config.defaultRoute || firstRouteName,
+      subroute: null,
+      params: {
+        route: {},
+        subroute: {},
+      },
+    };
 
-    if (initState) { 
-      const { name: route, params } = initState;
-      this.history = [{ route: name, subRoute: null, params }];
-      
-      this.setState({
-          route,
-          config,
-          params,
-          go: this.go,
-          back: this.back,
-          navigator: this,
-      });
-    }  
-
+    const initState = this.buildState(browser.getLocation(this.config)); 
+    console.log('initState', initState);
+    this.setState({  
+      ...initState,
+      history: this.history,
+      config,
+      go: this.go,
+      back: this.back,
+      navigator: this,
+    });  
+   
+    console.log('this', this);
     buildFakeHistory(this.config, this.routes);
   } 
+
+  private statesAreEqual = (stateA: NavigatorState, stateB: NavigatorState) => 
+    stateA && stateB 
+    && stateA.route === stateB.route 
+    && stateA.subroute === stateB.subroute;
+
+  private onPopState = (event: PopStateEvent) => {
+    const historyPrevState = this.history[this.history.length - 1];
+    const prevState = this.getPrevState();
+    const state = this.getState();
+    const isBack = this.statesAreEqual(prevState, historyPrevState); 
+    const nextState = isBack ? prevState : state;
+    if(isBack) {
+      this.history.pop();
+    } else {
+      this.history.push(nextState); 
+    }
+    
+    this.setState(prevState);
+    console.log('onPopState', this.history, nextState);
+  }
 
   private broadCastState = () => {
      const toState = this.getState();
      const fromState = this.getPrevState();
+     
      this.subscribers.forEach((subscriber: NavigatorSubscriber) => subscriber({ toState, fromState }));
   }
   
@@ -79,58 +122,30 @@ export class Navigator {
     this.broadCastState();
   }
 
-  private syncNavigatorStateWithCore: CoreSubscribeFn = (state) => {
-    const { 
-      route: coreState, 
-      previousRoute: prevCoreState } = state; 
-    const { name, params = {} } = coreState;  
+  private buildState = (url: string) => {
+    const path = urlToPath(url, this.config); 
+    const { route, subroute, params = {}} = getQueryParams(path);
+    const RouteNode = this.tree.getRouteNode(route);
+    const SubRouteNode = this.tree.getRouteNode(subroute);
+    let State: NavigatorState = this.defaultState;
 
-    const prevCoreStateFromUrlParams = { name: params.route, params };
-
-    const { name: prevName, params: prevParams = {} } = prevCoreState || prevCoreStateFromUrlParams; 
-    
-    const routeData = getRouteData(name, this.routes);
-    const isSubRoute = (routeData && routeData.subRoute) || !!params.subroute;
-    const isSubRoutePrevRoute = this.state.subRoute === prevName; 
-    
-    const route = isSubRoute 
-      ? isSubRoutePrevRoute 
-        ? this.state.route 
-        : prevName
-      : name;
-
-    const subRoute = isSubRoute 
-      ? params.subroute 
-        ? params.subroute 
-        : name 
-      : null;
-
-    const restoredPrevParams = restoreParams(prevParams);
-    const restoredParams = restoreParams(params);
-    const cleanedPrevRouteParams = getRouteParams(restoredPrevParams).route || {};
-    const cleanedRouteParams = getRouteParams(restoredParams).route || {};
-    const cleanedSubRouteParams = getRouteParams(restoredParams).subroute || {};
-
-    const routeParams = isSubRoute ? cleanedPrevRouteParams : cleanedRouteParams;
-    const subRouteParams = cleanedSubRouteParams;
-
-    const isBack = state && this.prevState && this.prevState.route === name;
-     
-    const prevHistoryState = this.history[this.history.length - 1];
-    const State: NavigatorState = {
-      route,
-      subRoute, 
-      subRouteParams,     
-      params: routeParams,
-    };
-  
-    if (isBack) {
-      this.history.pop();
-    } else {
-      this.history.push(State);
+    if (RouteNode) {
+      State = { route, params }; 
+      if (SubRouteNode) {
+        State = {
+          route,
+          subroute,
+          params
+        }
+      }
     }
-
-    this.setState(State);
+    
+    if (!State.route) {
+      console.error(ERROR_HAS_TO_BE_ROUTE);
+      return this.defaultState;
+    }
+ 
+    return State;
   }
  
   public subscribe=(subscriber: NavigatorSubscriber) => {
@@ -152,44 +167,137 @@ export class Navigator {
     this.subscribers = [];
   } 
 
-  public add = (routes: NavigatorRoute[]) => {
-    if(Array.isArray(routes)){
+  public add = (routes: NavigatorRoute[] | NavigatorRoute) => {
+    if (Array.isArray(routes)) {
       this.routes = [ ...this.routes, ...routes]
-      this.router.add(proccessRoutes(routes)); 
+      routes.forEach((route: NavigatorRoute) => {
+        this.tree.add(route); 
+      });
+    } else if(routes){
+      this.tree.add(routes); 
+    } else {
+      throw new Error(ERROR_TREE_NO_ROUTE);
     }
   }
 
-  public remove = (route: string) => {
-    // TODO: implement remove method
-    console.log('route to remove', route);
+  // TODO: remove method
+  public remove = (routeName: string) => {
+    this.tree.remove(routeName);
   }
 
-  public go = (to: string, params?: any, options: any = {}, done?: any) => {
-    return this.router.go(to, params, options, done);
+  public buildUrl = (routeName: string, params: NavigatorParams) => { 
+    const state = this.makeState(routeName, params);
+    const buildedSearch = buildQueryParams(state);
+    const search = buildedSearch.length ? '?' + buildedSearch : '';
+    return `${window.location.origin}${this.config.base}${search}`;
   }
+
+  private makeState = (routeName: string, routeParams: NavigatorParams = {}, options: NavigatorOptions = {}) => {
+    const routeNodeData = this.tree.getRouteNode(routeName);
+    const { routePath, routeNode } = routeNodeData || {};
+    const { data: routeData } = routeNode;
+    const subRouteKey = this.config.subRouteKey;
+    const prevState = this.getState();
+    
+    const params: NavigatorParams = {
+      route: routeParams,
+    }
+
+    let newState: NavigatorState = {
+      route: routePath,
+      params,  
+    }; 
+  
+    if (routeNode.data[subRouteKey]) {
+      newState = {
+        route: prevState.route,
+        params: {
+          route: prevState.params.route,
+          subroute: routeParams,
+        },
+        subroute: routePath,
+      };
+    } 
+
+    return { newState, routeData };
+  }
+
+  public go = (routeName: string, routeParams?: any, options: NavigatorOptions = {}, done?: any) => {
+    if(options.firstLoad){
+      debugger;
+    }
+
+    console.log('income Params', routeParams);
+    const { newState, routeData } = this.makeState(routeName, routeParams, options);
+    this.history.push(newState);
+    this.setState(newState);
+    if (routeData.updateUrl !== false) {
+      this.updateUrl(newState, options);
+    }
+
+    if (typeof done === 'function') {
+      done(newState);
+    }
+  }
+
+  // TODO : only querynav available at the moment
+  public updateUrl = (state: NavigatorState, options: NavigatorOptions, title: string = '') => {
+    console.log('updateUrl', state);
+    const buildedSearch = buildQueryParams(state);
+    const search = buildedSearch.length ? '?' + buildedSearch : '';
+    const url = `${window.location.origin}${this.config.base}${search}`; 
+    
+    if(options.replace){
+      browser.replaceState(state, title, url);
+    } else {
+      browser.pushState(state, title, url);
+    }
+  } 
 
   public navigate = (to: string, params?: any, options: any = {}, done?: any) => {
-    return this.router.go(to, params, options, done);
+    return this.go(to, params, options, done);
   }
  
   public back: VoidFunction = () => {
-    const { route, subRoute, subRouteParams, params } = this.getPrevState();
-    this.router.goBack();
+    window.history.back();
   };
 
-  public start = (...args: any[]) => {
-     Promise.resolve(this.router.start(...args))
-     .then(() => {
+  public start = (startRoute?: string, params?: NavigatorParams, options?: NavigatorOptions) => {
       this.isStarted = true;
-      this.broadCastState();
-     })
+      this.removePopStateListener = browser.addPopstateListener(this.onPopState, this.config);
 
+      const initState = this.getState();
+ 
+      if (initState && initState.route) {  
+        const routeName = initState.subroute || initState.route;
+        const params = initState.params.subroute || initState.params.route;
+        this.go(routeName, params, { firstLoad: true });
+      } else if (startRoute) {
+        this.go(startRoute, params, options);
+      } else {
+        const { defaultRoute } = this.config;
+        if (defaultRoute) {
+          this.go(defaultRoute, {}, {});
+        } else {
+          const [startRoute] = this.routes;
+          if (startRoute && startRoute.name) {
+            this.go(startRoute.name, {}, {});
+          } else {
+            if (this.defaultState) {
+              this.setState(this.defaultState);
+            }
+            throw new Error (ERROR_NO_ROUTES);
+          }
+        }
+      }
+
+      this.broadCastState();
      return this;
   }
 
   public stop = () => { 
     this.isStarted = false;
-    this.router.stop();
+    this.removePopStateListener();
   } 
   
   public getState = () => {

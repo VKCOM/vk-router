@@ -2,7 +2,8 @@ import { NavigatorRoute } from '..';
 import { 
     ERROR_TREE_PARENT_DOESNT_EXIST, 
     ERROR_TREE_NO_ROUTE, ERROR_ROUTE_NOT_REGISTERED, 
-    ERROR_NODE_TO_REMOVE_NOT_EXIST 
+    ERROR_NODE_TO_REMOVE_NOT_EXIST,
+    ERROR_PARENT_DOESNT_EXIST
 } from '../constants';
 
 import RouteNode from './RouteNode';
@@ -10,11 +11,14 @@ import { TreeCallback } from './types';
 
 export default class TreeRoutes {
   private root: RouteNode; 
+  private errorLogger = (err: string) => console.error(err);
+
   constructor() {
     const rootData = { name: '', path: '', params: '', children: [] as RouteNode[] };
     this.root = new RouteNode(rootData);
   }
- 
+
+
   contains = (callback: TreeCallback, traversal: any) => {
     traversal.call(this, callback);
   };
@@ -36,7 +40,7 @@ export default class TreeRoutes {
             parent.children.push(child);
             child.parent = parent; 
         } else {
-            throw new Error(ERROR_TREE_PARENT_DOESNT_EXIST);
+            this.errorLogger(ERROR_TREE_PARENT_DOESNT_EXIST);
         }
     };
 
@@ -52,7 +56,7 @@ export default class TreeRoutes {
         }, this.traverseDF);
        
        if(!resultNode){
-          throw new Error(ERROR_TREE_NO_ROUTE);
+          this.errorLogger(ERROR_TREE_NO_ROUTE);
        }
 
        return resultNode;
@@ -67,7 +71,7 @@ export default class TreeRoutes {
       }, this.traverseDF);
        
        if (!resultNode) {
-          throw new Error(ERROR_TREE_NO_ROUTE);
+          this.errorLogger(ERROR_TREE_NO_ROUTE);
        }
 
        return resultNode;
@@ -75,28 +79,28 @@ export default class TreeRoutes {
   
     // TODO: remove method
     remove = (routeName: string, traversal = this.traverseDF) => {
-        // let parent: RouteNode = null,
-        //     childToRemove = null,
-        //     index;
+        let parent: RouteNode = null,
+            childToRemove = null,
+            index;
      
-        // this.contains((node: RouteNode) => {
-        //     if (node.name === routeName) {
-        //         parent = node;
-        //     }
-        // }, traversal);
+        this.contains((node: RouteNode) => {
+            if (node.name === routeName) {
+                parent = node;
+            }
+        }, traversal);
      
-        // if (parent) {
-        //   index = this.findIndex(parent.children, data);
-        //   if (index === undefined) {
-        //     throw new Error(ERROR_NODE_TO_REMOVE_NOT_EXIST);
-        //   } else {
-        //     childToRemove = parent.children.splice(index, 1);
-        //   }
-        // } else {
-        //   throw new Error('Parent does not exist.');
-        // }
+        if (parent) {
+          index = this.findIndex(parent.children, routeName);
+          if (index === undefined) {
+            this.errorLogger(ERROR_NODE_TO_REMOVE_NOT_EXIST);
+          } else {
+            childToRemove = parent.children.splice(index, 1);
+          }
+        } else {
+           this.errorLogger(ERROR_PARENT_DOESNT_EXIST);
+        }
 
-        // return childToRemove;
+        return childToRemove;
     };
  
     traverseDF = (callback: any) => {
@@ -117,11 +121,11 @@ export default class TreeRoutes {
     }
 
     getRouteNode = (routeName: string = '') => {
-        const pathToRoute = routeName.includes('.') ? routeName: '';
+        const pathToRoute = routeName && routeName.includes('.') ? routeName: '';
         const routeNode: RouteNode = pathToRoute ? this.findByPath(pathToRoute) : this.findByName(routeName);
     
         if(!(routeNode instanceof RouteNode)){
-            throw new Error(ERROR_ROUTE_NOT_REGISTERED);
+            this.errorLogger(ERROR_ROUTE_NOT_REGISTERED);
         } 
         
         let revertedObjectPath = '';

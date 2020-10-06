@@ -37,9 +37,6 @@ const defaultConfig: NavigatorConfig = {
   routeKey: 'route',
 };
 
-/**
- *  class Navigator
- */
 export class Navigator {
   public state: NavigatorState;
   public prevState: NavigatorState;
@@ -49,7 +46,7 @@ export class Navigator {
   public routeProperties: NavigatorRouteProperties = {};
   public config: NavigatorConfig = defaultConfig;
   public isStarted = false;
-
+  private errorLogger = (err: string) => console.error(err);
   public tree: TreeRoutes;
 
   private subscribers: NavigatorSubscriber[] = [];   
@@ -57,7 +54,7 @@ export class Navigator {
   private removePopStateListener: VoidFunction;
 
   constructor ({ routes, config }: NavigatorCreateOptions) { 
-    this.routes = routes;  
+    this.routes = routes || [];  
     this.config = { ...defaultConfig, ...config };
 
     this.tree = createRoutesTree(this.routes); 
@@ -74,9 +71,10 @@ export class Navigator {
     };
 
     const initState = this.buildState(browser.getLocation(this.config)); 
-    console.log('initState', initState);
+   
     this.setState({  
       ...initState,
+
       history: this.history,
       config,
       go: this.go,
@@ -84,9 +82,12 @@ export class Navigator {
       navigator: this,
     });  
    
-    console.log('this', this);
     buildFakeHistory(this.config, this.routes);
   } 
+
+  private buildFakeHistory = () => {
+    
+  }
 
   private statesAreEqual = (stateA: NavigatorState, stateB: NavigatorState) => 
     stateA && stateB 
@@ -94,19 +95,18 @@ export class Navigator {
     && stateA.subroute === stateB.subroute;
 
   private onPopState = (event: PopStateEvent) => {
-    const historyPrevState = this.history[this.history.length - 1];
-    const prevState = this.getPrevState();
-    const state = this.getState();
-    const isBack = this.statesAreEqual(prevState, historyPrevState); 
-    const nextState = isBack ? prevState : state;
+    const historyPrevState = this.history[this.history.length - 2];
+    const state = event.state;
+    const isBack = this.statesAreEqual(state, historyPrevState); 
+    const nextState = isBack ? historyPrevState : state;
     if(isBack) {
       this.history.pop();
     } else {
       this.history.push(nextState); 
     }
-    
-    this.setState(prevState);
-    console.log('onPopState', this.history, nextState);
+    // console.log('onPopState', nextState);
+    this.setState(nextState);
+    // console.log(this.state);
   }
 
   private broadCastState = () => {
@@ -124,19 +124,15 @@ export class Navigator {
 
   private buildState = (url: string) => {
     const path = urlToPath(url, this.config); 
-    const { route, subroute, params = {}} = getQueryParams(path);
+    const { route, subroute = null, params = {}} = getQueryParams(path);
     const RouteNode = this.tree.getRouteNode(route);
-    const SubRouteNode = this.tree.getRouteNode(subroute);
     let State: NavigatorState = this.defaultState;
 
     if (RouteNode) {
-      State = { route, params }; 
-      if (SubRouteNode) {
-        State = {
-          route,
-          subroute,
-          params
-        }
+      State = {
+        route,
+        subroute,
+        params
       }
     }
     
@@ -205,6 +201,7 @@ export class Navigator {
 
     let newState: NavigatorState = {
       route: routePath,
+      subroute: null,
       params,  
     }; 
   
@@ -212,8 +209,8 @@ export class Navigator {
       newState = {
         route: prevState.route,
         params: {
-          route: prevState.params.route,
-          subroute: routeParams,
+          route: prevState.params.route || {},
+          subroute: routeParams || {},
         },
         subroute: routePath,
       };
@@ -223,16 +220,23 @@ export class Navigator {
   }
 
   public go = (routeName: string, routeParams?: any, options: NavigatorOptions = {}, done?: any) => {
-    if(options.firstLoad){
-      debugger;
+    const { newState, routeData } = this.makeState(routeName, routeParams, options);
+    const prevHistoryState = this.history[this.history.length - 2];
+    const isBack = this.statesAreEqual(prevHistoryState, newState);
+  
+    if (isBack) {
+      this.history.pop();
+    } else {
+      this.history.push(newState);
     }
 
-    console.log('income Params', routeParams);
-    const { newState, routeData } = this.makeState(routeName, routeParams, options);
-    this.history.push(newState);
+    const prevState = this.getPrevState();
     this.setState(newState);
     if (routeData.updateUrl !== false) {
       this.updateUrl(newState, options);
+    } else {
+      // fake enter for modal page
+      this.updateUrl(prevState, options);
     }
 
     if (typeof done === 'function') {
@@ -242,12 +246,11 @@ export class Navigator {
 
   // TODO : only querynav available at the moment
   public updateUrl = (state: NavigatorState, options: NavigatorOptions, title: string = '') => {
-    console.log('updateUrl', state);
     const buildedSearch = buildQueryParams(state);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
     const url = `${window.location.origin}${this.config.base}${search}`; 
     
-    if(options.replace){
+    if (options.replace) {
       browser.replaceState(state, title, url);
     } else {
       browser.pushState(state, title, url);
@@ -277,11 +280,11 @@ export class Navigator {
       } else {
         const { defaultRoute } = this.config;
         if (defaultRoute) {
-          this.go(defaultRoute, {}, {});
+          this.go(defaultRoute);
         } else {
           const [startRoute] = this.routes;
           if (startRoute && startRoute.name) {
-            this.go(startRoute.name, {}, {});
+            this.go(startRoute.name);
           } else {
             if (this.defaultState) {
               this.setState(this.defaultState);

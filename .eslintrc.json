@@ -1,5 +1,4 @@
 {
-  "extends": ["@vkontakte/eslint-config/typescript/react", "plugin:react-hooks/recommended"],
   "parserOptions": {
     "project": "./tsconfig.json",
     "ecmaVersion": 6,

@@ -22,6 +22,8 @@ export interface NavigatorParams {
   }
 } 
 
+export type NavigatorRouteProperties = Record<string, any>;
+
 export interface NavigatorOptions {
   [key: string]: any;
   replace?: boolean;

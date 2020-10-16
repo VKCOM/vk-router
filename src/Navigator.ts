@@ -16,17 +16,13 @@ import {
   NavigatorSubscriber,
   NavigatorCreateOptions,
   NavigatorConfig,
-  
+  NavigatorRouteProperties,
   CreateNavigatorOptions, NavigatorOptions, NavigatorParams
 } from './types'; 
 
 import { ERROR_NO_ROUTES, ERROR_HAS_TO_BE_ROUTE, ERROR_TREE_NO_ROUTE } from './constants';
 import browser from './browser';
 import TreeRoutes from './tree/Tree';
-
-interface NavigatorRouteProperties {
-  [key:string]: any
-}
 
 const defaultConfig: NavigatorConfig = { 
   defaultRoute: '/',
@@ -81,12 +77,20 @@ export class Navigator {
       back: this.back,
       navigator: this,
     });  
-   
-    buildFakeHistory(this.config, this.routes);
   } 
 
-  private buildFakeHistory = () => {
-    
+  private buildInternalHistory = () => {
+    const state = this.getState();
+
+    if (state.params.subroute) {
+      const routeEntries = [];
+      const subrouteEntries = []
+      const entries = [];
+      if (state.route && state.subroute) {
+        
+      }
+      this.history = [...this.history, ...entries];
+    }
   }
 
   private statesAreEqual = (stateA: NavigatorState, stateB: NavigatorState) => 
@@ -230,13 +234,14 @@ export class Navigator {
       this.history.push(newState);
     }
 
-    const prevState = this.getPrevState();
     this.setState(newState);
+    const prevState = this.getPrevState();
+
     if (routeData.updateUrl !== false) {
       this.updateUrl(newState, options);
     } else {
       // fake enter for modal page
-      this.updateUrl(prevState, options);
+      this.updateUrl(prevState, { fakeEntry: true });
     }
 
     if (typeof done === 'function') {
@@ -246,10 +251,16 @@ export class Navigator {
 
   // TODO : only querynav available at the moment
   public updateUrl = (state: NavigatorState, options: NavigatorOptions, title: string = '') => {
+    if (options.fakeEntry) {
+      const currentUrl = browser.getLocation(this.config);
+      browser.pushState(state, title, currentUrl);
+      return;
+    }
+  
     const buildedSearch = buildQueryParams(state);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
-    const url = `${window.location.origin}${this.config.base}${search}`; 
     
+    const url = `${window.location.origin}${this.config.base}${search}`; 
     if (options.replace) {
       browser.replaceState(state, title, url);
     } else {
@@ -289,7 +300,7 @@ export class Navigator {
             if (this.defaultState) {
               this.setState(this.defaultState);
             }
-            throw new Error (ERROR_NO_ROUTES);
+            this.errorLogger(ERROR_NO_ROUTES);
           }
         }
       }
@@ -310,6 +321,28 @@ export class Navigator {
   public getPrevState = () => {
     return this.prevState;
   }
+
+  public isActive = (routeName: string, routeParams: NavigatorParams, strictCompare: boolean = true, ignoreParams: boolean = false) => {
+    
+  }
+
+  // Lifecycle
+
+  // private transitionToState = (fromState: NavigatorState, toState: NavigatorState) => {
+  //   // this.pending = true;
+  // }
+
+  // private transitionSuccess = (state: NavigatorState) => {
+  //   this.setState(state);
+  // }
+
+  // private transitionError = (state: NavigatorState) => {
+
+  // }
+
+  // private created = (state: NavigatorState) => {
+
+  // }
 }
 
 

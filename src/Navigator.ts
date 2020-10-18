@@ -70,6 +70,12 @@ export class Navigator {
       : this.errorLogger;
 
     this.tree = createRoutesTree(this.routes);
+
+    this.initialize();
+    // this.buildHistory();
+  }
+
+  private initialize = () => {
     let firstRouteName = (this.routes[0] || {}).name;
 
     this.defaultState = {
@@ -86,11 +92,9 @@ export class Navigator {
       ...initState,
       history: this.history,
     });
-
-    this.buildHistory();
   }
 
-  private buildHistory = () => {
+  private buildHistory = () => { 
     const state = this.getState();
     let routeStr = '';
     const segments = state.route.includes('.') ? state.route.split('.') : [state.route];
@@ -109,6 +113,7 @@ export class Navigator {
     }
     this.history = [ ...routeEntries];
     routeEntries.forEach((state: NavigatorState, idx: number) => this.updateUrl(state, { replace: !idx }));
+    // console.log('history', this.history);
   };
 
   private onPopState = (event: PopStateEvent) => {
@@ -225,7 +230,9 @@ export class Navigator {
     const prevState = this.getState();
 
     const params: NavigatorParams = {
-      route: routeParams,
+      route: {
+        [routeName]: routeParams,
+      }
     };
 
     let newState: NavigatorState = {
@@ -239,7 +246,9 @@ export class Navigator {
         route: prevState.route,
         params: {
           route: prevState.params.route || {},
-          subroute: routeParams || {},
+          subroute: {
+            [routeName]: routeParams || {},
+          }
         },
         subroute: routePath,
       };
@@ -365,11 +374,19 @@ export class Navigator {
     this.removePopStateListener();
   };
 
-  public getState = () => {
+  public getState = (withoutHistory: boolean = false) => {
+    if (withoutHistory) {
+      const { history, ...state} = this.state;
+      return state;
+    }
     return this.state;
   };
 
-  public getPrevState = () => {
+  public getPrevState = (withoutHistory: boolean = false) => {
+    if (withoutHistory) {
+      const { history, ...state} = this.prevState;
+      return state;
+    }
     return this.prevState;
   };
 
@@ -379,15 +396,19 @@ export class Navigator {
     strictCompare: boolean = true,
     // TODO: ignoreParams: boolean = false
   ) => {
-    const { history, ...state } = this.getState();
+    const state = this.getState(true);
+    const prevState = this.getPrevState(true);
     const { newState: compareState } = this.makeState(routeName, routeParams) || {};
+
     const areSame = deepEqual(state, compareState);
+    const onSubRoute = state.route === prevState.route && state.subroute === routeName;
+
     let res = false;
     if (!strictCompare) {
       res = state.route === routeName || state.subroute === routeName;
     }
-    res = areSame;
-    console.log(state, compareState)
+
+    res = areSame || onSubRoute;
     return res;
   }; 
   // router5 like interfaces

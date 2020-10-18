@@ -1,3 +1,5 @@
+import RouteNode from "./RouteNode";
+
 export interface BrowserPluginOptions {
     forceDeactivate?: boolean
     useHash?: boolean
@@ -46,4 +48,4 @@ export interface URLParamsCollection {
     [key: string]: any
 }
 
-export type TreeCallback = (node: any) => void;
+export type TreeCallback = (node: RouteNode) => void;

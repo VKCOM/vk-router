@@ -1,3 +1,5 @@
+export type NavigatorErrorLogger = (errorStr: string) => void;
+
 export interface NavigatorConfig {
   defaultRoute: string;
   base?: string;
@@ -6,6 +8,7 @@ export interface NavigatorConfig {
   useQueryNavigation?: boolean;
   subRouteKey?: string; 
   routeKey?: string;
+  errorLogger?: NavigatorErrorLogger;
 }
 
 export interface URLParamsCollection {
@@ -67,9 +70,6 @@ export interface NavigatorState {
   subroute?: string,
   path?: string,
   history?: NavigatorHistoryRecord[],
-  go?: Function,
-  back?: VoidFunction,
-  config?: NavigatorConfig,
   params: NavigatorParams,
   navigator?: any,
 }
@@ -81,6 +81,12 @@ export interface NavigatorStatesToSubscriber {
 
 export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;
  
+export type NavigatorDone = (func?: any) => void;
+
+export type NavigatorRouteHandler = (fromState: NavigatorState, toState: NavigatorState, done: NavigatorDone) => void;
+
+export type NavigatorRouteHandlerCollection = Record<string, NavigatorRouteHandler>;
+
 export interface Browser {
   getBase(): string
   pushState(state: HistoryState, title: string | null, path: string): void

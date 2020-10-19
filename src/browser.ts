@@ -16,6 +16,65 @@ const pushState = (state: any, title: string, path: string) =>
 const replaceState = (state: any, title: any, path: any) =>
   window.history.replaceState(state, title, path);
 
+const merge = (object: Record<string, any>, other: Record<string, any>) => {
+  const merged: Record<string, any> = {};
+  Object.keys(object || []).forEach((key: string) => {
+    merged[key] = object[key];
+  });
+  Object.keys(other || []).forEach((key: string) => {
+    merged[key] = object[key];
+  });
+
+  return merged;
+};
+
+const onLinkListener = (navigator: any, opts: any) => {
+  function which(e: any) {
+    e = e || window.event;
+    return null === e.which ? e.button : e.which;
+  }
+
+  return function onclick(e: any) {
+    if (1 !== which(e)) return;
+
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (e.defaultPrevented) return;
+
+    // ensure link
+    var el = e.target;
+    while (el && "A" !== el.nodeName) el = el.parentNode;
+    if (!el || "A" !== el.nodeName) return;
+
+    // Ignore if tag has
+    // 1. "download" attribute
+    // 2. rel="external" attribute
+    if (el.hasAttribute("download") || el.getAttribute("rel") === "external")
+      return;
+
+    // check target
+    if (el.target) return;
+    if (!el.href) return;
+
+    const toRouteState = navigator.buildState(el.href);
+    if (toRouteState) {
+      e.preventDefault();
+      const routeName = toRouteState.route || toRouteState.subroute;
+      const params = toRouteState.params.route; 
+      navigator.go(routeName, params);
+    }
+  };
+};
+
+const addLinkInterceptorListener = (navigator: Navigator, opts?: any) => {
+  const clickEvent = document.ontouchstart ? "touchstart" : "click";
+  const clickHandler = onLinkListener(navigator, opts);
+  document.addEventListener(clickEvent, clickHandler, false);
+
+  return () => {
+    window.removeEventListener(clickEvent, clickHandler);
+  };
+};
+
 const addPopstateListener = (fn: any, opts: any) => {
   const shouldAddHashChangeListener =
     opts.useHash && !supportsPopStateOnHashChange();
@@ -63,6 +122,7 @@ if (isBrowser) {
     pushState,
     replaceState,
     addPopstateListener,
+    addLinkInterceptorListener,
     getLocation,
     getState,
     getHash,

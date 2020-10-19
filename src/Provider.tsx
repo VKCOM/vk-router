@@ -9,7 +9,7 @@ export default class Provider extends React.PureComponent<NavigatorProps> {
   public constructor(props: NavigatorProps) {
     super(props);
     const { routes, config } = this.props;
-    const navigator = createNavigator({ routes, config });  
+    const navigator = createNavigator(routes, config);  
     const initialState = navigator.getState();
     navigator.subscribe(this.onNavigatorChange);
     navigator.start(); 

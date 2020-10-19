@@ -35,7 +35,10 @@ export default class TreeRoutes {
     this.traverse(callback);
   };
 
-  public add = (routeNode: RouteNode | NavigatorRoute, parentNode?: RouteNode) => {
+  public add = (
+    routeNode: RouteNode | NavigatorRoute,
+    parentNode?: RouteNode
+  ) => {
     let child =
         routeNode instanceof RouteNode ? routeNode : new RouteNode(routeNode),
       parent: RouteNode = null;
@@ -67,15 +70,14 @@ export default class TreeRoutes {
       while (stack.length) {
         const route = stack.pop();
         if (route.name === segment) {
-          console.log('-->', route.name);
           console.log(stack, route, segment);
           stack.push(...route.children);
-        } else if (route.name === targetSegment){
+        } else if (route.name === targetSegment) {
           resultNode = route;
         }
-      };
-    }
-    segments.forEach(lookUpSegment)
+      }
+    };
+    segments.forEach(lookUpSegment);
 
     if (!resultNode) {
       this.errorLogger(ERROR_TREE_NO_ROUTE);
@@ -171,10 +173,12 @@ export default class TreeRoutes {
 
   public getRouteNode = (routeName: string = "") => {
     const pathToRoute = routeName && routeName.includes(".") ? routeName : "";
-    const routeNode: RouteNode = pathToRoute ? this.findByPath(pathToRoute) : this.findByName(routeName);
+    const routeNode: RouteNode = pathToRoute
+      ? this.findByPath(pathToRoute)
+      : this.findByName(routeName);
 
     if (!(routeNode instanceof RouteNode)) {
-      this.errorLogger(ERROR_ROUTE_NOT_REGISTERED);
+      // this.errorLogger(ERROR_ROUTE_NOT_REGISTERED);
     }
 
     let revertedObjectPath = "";
@@ -202,7 +206,7 @@ export function createRoutesTree(
   config: TreeRoutesConfig = {}
 ) {
   const RoutesTree = new TreeRoutes(config);
-  
+
   (function addRoutes(route: RouteNode[] | RouteNode, parent?: RouteNode) {
     if (Array.isArray(route)) {
       route.forEach((el) => addRoutes(el));

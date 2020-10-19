@@ -4,15 +4,13 @@ import {
   getQueryParams,
   urlToPath,
   deepEqual,
-} from './utils';
+} from "./utils";
 import {
   NavigatorRoute,
   NavigatorState,
   NavigatorHistoryRecord,
   NavigatorSubscriber,
-  NavigatorCreateOptions,
   NavigatorConfig,
-  CreateNavigatorOptions,
   NavigatorOptions,
   NavigatorParams,
   NavigatorRouteHandler,
@@ -55,13 +53,13 @@ export class Navigator {
   public isStarted = false;
 
   private errorLogger: NavigatorErrorLogger = (err) => console.log(err);
-  
+
   public tree: TreeRoutes;
 
-
   private removePopStateListener: VoidFunction;
+  private removeLinkPressListener: VoidFunction;
 
-  constructor({ routes, config }: NavigatorCreateOptions) {
+  constructor(routes?: NavigatorRoute[], config?: NavigatorConfig) {
     this.routes = routes || [];
     this.config = { ...defaultConfig, ...config };
 
@@ -92,41 +90,63 @@ export class Navigator {
       ...initState,
       history: this.history,
     });
-  }
+  };
 
-  private buildHistory = () => { 
+  private adapter = (state: NavigatorState) => {
+    return {
+      ...state,
+      name: state.route,
+    };
+  };
+
+  private buildHistory = () => {
     const state = this.getState();
-    let routeStr = '';
-    const segments = state.route.includes('.') ? state.route.split('.') : [state.route];
+    let routeStr = "";
+    const segments = state.route.includes(".")
+      ? state.route.split(".")
+      : [state.route];
     const routeSegments = segments.map((segment: string, idx: number) => {
-      routeStr+= idx !== 0 ? `.${segment}`: segment;
+      routeStr += idx !== 0 ? `.${segment}` : segment;
       return routeStr;
     });
-    
-    const routeEntries: NavigatorState[] = routeSegments.map((routeName: string) => ({ 
-        route: routeName, 
-        params: { route: state.params.route }
-      }));
+
+    const routeEntries: NavigatorState[] = routeSegments.map(
+      (routeName: string) => ({
+        route: routeName,
+        params: { route: state.params.route },
+      })
+    );
 
     if (state.subroute) {
       routeEntries.push(state);
     }
-    this.history = [ ...routeEntries];
-    routeEntries.forEach((state: NavigatorState, idx: number) => this.updateUrl(state, { replace: !idx }));
+    this.history = [...routeEntries];
+    routeEntries.forEach((state: NavigatorState, idx: number) =>
+      this.updateUrl(state, { replace: !idx })
+    );
     // console.log('history', this.history);
   };
 
   private onPopState = (event: PopStateEvent) => {
     const pointer = event.state.counter;
     const nextState = this.history[pointer];
-    this.setState(nextState);
+    this.replaceState(nextState);
   };
 
   private broadCastState = () => {
-    const toState = this.getState();
-    const fromState = this.getPrevState();
+    const toState = this.config.useAdapter
+      ? this.adapter(this.getState())
+      : this.getState();
+    const fromState = this.config.useAdapter
+      ? this.adapter(this.getPrevState())
+      : this.getPrevState();
     this.subscribers.forEach((subscriber: NavigatorSubscriber) =>
-      subscriber({ toState, fromState })
+      subscriber({
+        toState,
+        fromState,
+        route: toState,
+        previousRoute: fromState,
+      })
     );
   };
 
@@ -136,18 +156,33 @@ export class Navigator {
     }
   };
 
-  private setState = (state: Partial<NavigatorState>) => {
+  private replaceState = (state: NavigatorState) => {
     const prevState = { ...this.state };
-    const nextState = { ...this.state, ...state };
-  
+    const nextState = { ...state };
     if (!deepEqual(prevState, nextState)) {
       const handlerCanActivate = this.routeHandlerCollection[nextState.route];
       // handlerCanActivateSubroute = this.routeHandlerCollection[nextState.subroute];
       this.state = nextState;
       this.prevState = prevState;
-      if (typeof handlerCanActivate === 'function') { 
+      if (typeof handlerCanActivate === "function") {
+        // handlerCanActivate(nextState, prevState, this.done);
+      }
+    }
+    this.broadCastState();
+  };
+
+  private setState = (state: Partial<NavigatorState>) => {
+    const prevState = { ...this.state };
+    const nextState = { ...this.state, ...state };
+
+    if (!deepEqual(prevState, nextState)) {
+      const handlerCanActivate = this.routeHandlerCollection[nextState.route];
+      // handlerCanActivateSubroute = this.routeHandlerCollection[nextState.subroute];
+      this.state = nextState;
+      this.prevState = prevState;
+      if (typeof handlerCanActivate === "function") {
         handlerCanActivate(nextState, prevState, this.done);
-      }  
+      }
     }
     this.broadCastState();
   };
@@ -202,7 +237,7 @@ export class Navigator {
     } else if (routes) {
       this.tree.add(routes);
     } else {
-      throw new Error(ERROR_TREE_NO_ROUTE);
+      this.errorLogger(ERROR_TREE_NO_ROUTE);
     }
   };
 
@@ -211,28 +246,42 @@ export class Navigator {
     this.tree.remove(routeName);
   };
 
-  public buildUrl = (routeName: string, params: NavigatorParams) => {
-    const state = this.makeState(routeName, params);
+  public buildUrl = (
+    routeName: string,
+    params: NavigatorParams = {}
+  ): string => {
+    const { newState: state } = this.makeState(routeName, params);
     const buildedSearch = buildQueryParams(state);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
-    return `${window.location.origin}${this.config.base}${search}`;
+    const url = `${window.location.origin}${this.config.base}${search}`;
+    // console.log(url);
+    return url;
+  };
+
+  public buildPath = (
+    routeName: string,
+    params: NavigatorParams = {}
+  ): string => {
+    const { newState: state } = this.makeState(routeName, params);
+    const buildedSearch = buildQueryParams(state);
+    const search = buildedSearch.length ? "?" + buildedSearch : "";
+    return `${this.config.base}${search}`;
   };
 
   private makeState = (
     routeName: string,
     routeParams: NavigatorParams = {},
-    options: NavigatorOptions = {}
   ) => {
     const routeNodeData = this.tree.getRouteNode(routeName);
     const { routePath, routeNode } = routeNodeData || {};
-    const { data: routeData } = routeNode;
+    const { data: routeData } = routeNode || { data: null };
     const subRouteKey = this.config.subRouteKey;
     const prevState = this.getState();
 
     const params: NavigatorParams = {
       route: {
         [routeName]: routeParams,
-      }
+      },
     };
 
     let newState: NavigatorState = {
@@ -241,14 +290,14 @@ export class Navigator {
       params,
     };
 
-    if (routeNode.data[subRouteKey]) {
+    if (routeNode?.data?.[subRouteKey]) {
       newState = {
         route: prevState.route,
         params: {
           route: prevState.params.route || {},
           subroute: {
             [routeName]: routeParams || {},
-          }
+          },
         },
         subroute: routePath,
       };
@@ -266,22 +315,20 @@ export class Navigator {
     const { newState, routeData } = this.makeState(
       routeName,
       routeParams,
-      options
     );
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
 
-    if (isBack) { 
+    if (isBack) {
       this.history.pop();
     } else {
       this.history.push(newState);
     }
 
-    
     this.setState(newState);
     const prevState = this.getPrevState();
 
-    if (routeData.updateUrl !== false) {
+    if (routeData && routeData.updateUrl !== false) {
       this.updateUrl(newState, {});
     } else {
       // fake enter for subroute page
@@ -341,6 +388,11 @@ export class Navigator {
       this.config
     );
 
+    this.removeLinkPressListener = browser.addLinkInterceptorListener(
+      this,
+      this.config
+    );
+
     const initState = this.getState();
 
     if (initState && initState.route) {
@@ -371,12 +423,13 @@ export class Navigator {
 
   public stop = () => {
     this.isStarted = false;
+    this.removeLinkPressListener();
     this.removePopStateListener();
   };
 
   public getState = (withoutHistory: boolean = false) => {
     if (withoutHistory) {
-      const { history, ...state} = this.state;
+      const { history, ...state } = this.state;
       return state;
     }
     return this.state;
@@ -384,7 +437,7 @@ export class Navigator {
 
   public getPrevState = (withoutHistory: boolean = false) => {
     if (withoutHistory) {
-      const { history, ...state} = this.prevState;
+      const { history, ...state } = this.prevState;
       return state;
     }
     return this.prevState;
@@ -394,14 +447,17 @@ export class Navigator {
     routeName: string,
     routeParams: NavigatorParams = {},
     strictCompare: boolean = true,
+    ignoreParams: boolean = false
     // TODO: ignoreParams: boolean = false
   ) => {
     const state = this.getState(true);
     const prevState = this.getPrevState(true);
-    const { newState: compareState } = this.makeState(routeName, routeParams) || {};
+    const { newState: compareState } =
+      this.makeState(routeName, routeParams) || {};
 
     const areSame = deepEqual(state, compareState);
-    const onSubRoute = state.route === prevState.route && state.subroute === routeName;
+    const onSubRoute =
+      state.route === prevState.route && state.subroute === routeName;
 
     let res = false;
     if (!strictCompare) {
@@ -410,8 +466,7 @@ export class Navigator {
 
     res = areSame || onSubRoute;
     return res;
-  }; 
-  // router5 like interfaces
+  };
 
   public canActivate = (
     routeName: string,
@@ -420,14 +475,17 @@ export class Navigator {
     this.routeHandlerCollection[routeName] = routerHandler;
   };
 
-  public canDeactivate = () => {};
+  // public canDeactivate = () => {};
 }
 
-export type CreateNavigator = (options: CreateNavigatorOptions) => Navigator;
+export type CreateNavigator = (
+  routes?: NavigatorRoute[],
+  config?: NavigatorConfig
+) => Navigator;
 
-export const createNavigator: CreateNavigator = ({
+export const createNavigator: CreateNavigator = (
   routes,
-  config = defaultConfig,
-}) => {
-  return new Navigator({ routes, config });
+  config = defaultConfig
+) => {
+  return new Navigator(routes, config);
 };

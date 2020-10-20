@@ -2,6 +2,7 @@ export default class RouteNode {
     [key:string]: any;
     path?: string;
     name: string;
+    parent?: RouteNode | null;
     children?: RouteNode[];
     encodeParams?: () => {};
     decodeParams?: () => {};

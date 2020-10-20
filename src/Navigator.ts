@@ -67,7 +67,10 @@ export class Navigator {
       ? this.config.errorLogger
       : this.errorLogger;
 
-    this.tree = createRoutesTree(this.routes);
+    this.tree = createRoutesTree(this.routes, {
+      errorLogger: this.errorLogger,
+      useAdapter: this.config.useAdapter,
+    });
 
     this.initialize();
     // this.buildHistory();
@@ -113,7 +116,7 @@ export class Navigator {
     const routeEntries: NavigatorState[] = routeSegments.map(
       (routeName: string) => ({
         route: routeName,
-        params: { route: state.params.route },
+        params: state.params[routeName],
       })
     );
 
@@ -165,7 +168,7 @@ export class Navigator {
       this.state = nextState;
       this.prevState = prevState;
       if (typeof handlerCanActivate === "function") {
-        // handlerCanActivate(nextState, prevState, this.done);
+        handlerCanActivate(nextState, prevState, this.done);
       }
     }
     this.broadCastState();
@@ -191,6 +194,7 @@ export class Navigator {
     const path = urlToPath(url, this.config);
     const { route, subroute = null, params = {} } = getQueryParams(path);
     const RouteNode = this.tree.getRouteNode(route);
+
     let State: NavigatorState = this.defaultState;
 
     if (RouteNode) {
@@ -199,7 +203,7 @@ export class Navigator {
         subroute,
         params,
       };
-    }
+    } 
 
     if (!State.route) {
       this.errorLogger(ERROR_HAS_TO_BE_ROUTE);
@@ -272,17 +276,25 @@ export class Navigator {
     routeName: string,
     routeParams: NavigatorParams = {},
   ) => {
-    const routeNodeData = this.tree.getRouteNode(routeName);
+    const routeNodeData = this.tree.getRouteNode(routeName); 
+
     const { routePath, routeNode } = routeNodeData || {};
     const { data: routeData } = routeNode || { data: null };
     const subRouteKey = this.config.subRouteKey;
     const prevState = this.getState();
-
-    const params: NavigatorParams = {
-      route: {
-        [routeName]: routeParams,
-      },
+    
+    let params: NavigatorParams = {
+      [routeName]: routeParams || { [routeName] : {}},
     };
+
+    if (routeNode?.parent?.name) {
+      params = {
+          [routeName]: {
+            ...(prevState.params[routeNode.parent.name] || {}),
+            ...(routeParams || {}),
+          }
+      }
+    }
 
     let newState: NavigatorState = {
       route: routePath,
@@ -294,10 +306,8 @@ export class Navigator {
       newState = {
         route: prevState.route,
         params: {
-          route: prevState.params.route || {},
-          subroute: {
-            [routeName]: routeParams || {},
-          },
+          ...prevState.params,
+          [routeName]: routeParams || { [routeName] : {}},
         },
         subroute: routePath,
       };
@@ -316,6 +326,9 @@ export class Navigator {
       routeName,
       routeParams,
     );
+
+    console.log('go to', routeName, routeParams);
+ 
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
 
@@ -397,10 +410,10 @@ export class Navigator {
 
     if (initState && initState.route) {
       const routeName = initState.subroute || initState.route;
-      const params = initState.params.subroute || initState.params.route;
+      const params = initState.params[routeName];
       this.go(routeName, params, { firstLoad: true });
     } else if (startRoute) {
-      this.go(startRoute, params, options);
+      this.go(startRoute, params[startRoute], options);
     } else {
       const { defaultRoute } = this.config;
       if (defaultRoute) {

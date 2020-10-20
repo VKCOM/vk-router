@@ -64,3 +64,16 @@ export const buildUrlParams = (queryObj: Record<string, any> | string, nested: s
 };
 
 export const buildPathFromDotPath = (path: string) => path ? '/'+ path.split('.').join('/') : '';
+
+export const getParentPath = (path: string) => {
+  const segments = path.split('.');
+  segments.splice(-1, 1);
+  return segments.length ? segments.join('') : segments.join('');
+};
+
+export const isPath = (name: string) => name.includes('.');
+
+export const cutName = (path: string) => {
+  const segments = path.split('.');
+  return segments.splice(-1, 1)[0];
+}

@@ -16,7 +16,7 @@ const pushState = (state: any, title: string, path: string) =>
 const replaceState = (state: any, title: any, path: any) =>
   window.history.replaceState(state, title, path);
 
-const merge = (object: Record<string, any>, other: Record<string, any>) => {
+export const merge = (object: Record<string, any>, other: Record<string, any>) => {
   const merged: Record<string, any> = {};
   Object.keys(object || []).forEach((key: string) => {
     merged[key] = object[key];
@@ -59,7 +59,8 @@ const onLinkListener = (navigator: any, opts: any) => {
     if (toRouteState) {
       e.preventDefault();
       const routeName = toRouteState.route || toRouteState.subroute;
-      const params = toRouteState.params.route; 
+      const params = toRouteState.params[routeName];
+
       navigator.go(routeName, params);
     }
   };

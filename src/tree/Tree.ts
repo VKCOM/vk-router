@@ -1,4 +1,5 @@
 import { NavigatorRoute } from "..";
+import { getParentPath, isPath, cutName } from "./utils";
 import {
   ERROR_TREE_PARENT_DOESNT_EXIST,
   ERROR_TREE_NO_ROUTE,
@@ -12,11 +13,12 @@ import { TreeCallback } from "./types";
 
 export interface TreeRoutesConfig {
   errorLogger?: (err: string) => void;
+  useAdapter?: boolean;
 }
 
 export default class TreeRoutes {
   private root: RouteNode;
-  private errorLogger = (err: string) => console.error(err);
+  private errorLogger = (err: string, arg?: string) => console.error(err, arg);
 
   constructor(config: TreeRoutesConfig) {
     if (config.errorLogger) {
@@ -35,13 +37,21 @@ export default class TreeRoutes {
     this.traverse(callback);
   };
 
+  public getParentNode = (path: string) => {
+    const pathToParent = getParentPath(path);
+    const parent = this.getByPath(pathToParent);
+    if (parent) {
+      return parent;
+    }
+  };
+
   public add = (
     routeNode: RouteNode | NavigatorRoute,
     parentNode?: RouteNode
   ) => {
     let child =
-        routeNode instanceof RouteNode ? routeNode : new RouteNode(routeNode),
-      parent: RouteNode = null;
+      routeNode instanceof RouteNode ? routeNode : new RouteNode(routeNode);
+    let parent: RouteNode = null;
 
     this.contains((node: RouteNode) => {
       if (parentNode && node && node.name === parentNode.name) {
@@ -62,57 +72,30 @@ export default class TreeRoutes {
 
   private getByPath = (pathToRoute: string) => {
     const segments = pathToRoute.split(".");
-    const targetSegment = segments[segments.length - 1];
     const stack = [...this.root.children];
     let resultNode: RouteNode | null = null;
 
-    const lookUpSegment = (segment: string) => {
-      while (stack.length) {
-        const route = stack.pop();
-        if (route.name === segment) {
-          console.log(stack, route, segment);
+    while (stack.length && segments.length) {
+      const route = stack.shift();
+      const [segment] = segments;
+      if (route.name === segment) {
+        if (segments.length > 1) {
           stack.push(...route.children);
-        } else if (route.name === targetSegment) {
+          segments.shift();
+          continue;
+        } else if (segments.length === 1) {
           resultNode = route;
+          break;
         }
       }
-    };
-    segments.forEach(lookUpSegment);
-
+    }
     if (!resultNode) {
       this.errorLogger(ERROR_TREE_NO_ROUTE);
     }
-
     return resultNode;
   };
 
-  private findByPath = (pathToRoute: string) => {
-    const segments = pathToRoute.split(".");
-    let pathCount: number = segments.length;
-    const targetSegment = segments[segments.length - 1];
-
-    let resultNode: RouteNode | null = null;
-
-    const checkNodeExists = (segment: string) => {
-      this.contains((node: RouteNode) => {
-        if (node.name === segment) {
-          --pathCount;
-        }
-        if (pathCount === 0 && node.name === targetSegment) {
-          resultNode = node;
-        }
-      });
-    };
-
-    segments.forEach(checkNodeExists);
-
-    if (!resultNode) {
-      this.errorLogger(ERROR_TREE_NO_ROUTE);
-    }
-
-    return resultNode;
-  };
-
+  // only first occurence
   private findByName = (nodeName: string) => {
     let resultNode;
     this.contains((node: RouteNode) => {
@@ -156,7 +139,7 @@ export default class TreeRoutes {
   private traverse = (callback: TreeCallback) => {
     (function recurse(currentNode) {
       for (
-        var i = 0,
+        let i = 0,
           length = currentNode.children ? currentNode.children.length : 0;
         i < length;
         i++
@@ -171,40 +154,103 @@ export default class TreeRoutes {
     return routes.findIndex((route: RouteNode) => route.name === routeName);
   };
 
-  public getRouteNode = (routeName: string = "") => {
-    const pathToRoute = routeName && routeName.includes(".") ? routeName : "";
-    const routeNode: RouteNode = pathToRoute
-      ? this.findByPath(pathToRoute)
-      : this.findByName(routeName);
-
-    if (!(routeNode instanceof RouteNode)) {
-      // this.errorLogger(ERROR_ROUTE_NOT_REGISTERED);
-    }
-
+  public printRoute = (route: RouteNode) => {
     let revertedObjectPath = "";
 
-    (function printRoute(node) {
+    const fnPrint = (node: RouteNode) => {
       if (node instanceof RouteNode && node.name) {
         revertedObjectPath += `.${node.name}`;
         if (node.parent) {
-          printRoute(node.parent);
+          fnPrint(node.parent);
         }
       }
-    })(routeNode);
+    };
+    fnPrint(route);
 
-    const routePath = revertedObjectPath
-      .split(".")
-      .reverse()
-      .join(".")
-      .replace(/\.$/, "");
+    return revertedObjectPath.split(".").reverse().join(".").replace(/\.$/, "");
+  };
+
+  public getRouteNode = (routeName: string = "") => {
+    const pathToRoute = isPath(routeName) ? routeName : "";
+
+    const routeNode: RouteNode = pathToRoute
+      ? this.getByPath(pathToRoute)
+      : this.findByName(routeName);
+
+    if (!(routeNode instanceof RouteNode)) {
+      this.errorLogger(ERROR_ROUTE_NOT_REGISTERED, pathToRoute);
+    }
+
+    const routePath = this.printRoute(routeNode);
     return { routePath, routeNode };
   };
 }
+
+const getParentNode = (routes: RouteNode[], path: string) => {
+  const parentPath = getParentPath(path);
+  const parent = routes.find((el: NavigatorRoute) => el.name === parentPath);
+  return parent;
+};
+
+const getRequiredParamsFromPath = (path: string) => {
+  const params: string[] = [];
+  const requiredParam = path.split(":")[1];
+  if (requiredParam) {
+    params.push(requiredParam);
+  }
+  return params;
+};
+
+const makePreTreeRoute = (route: NavigatorRoute) => {
+  const { path, name, ...routeProps } = route;
+  const preTreeRoute: NavigatorRoute = {
+    ...routeProps,
+    name: cutName(name),
+    params: getRequiredParamsFromPath(path),
+  };
+
+  return preTreeRoute;
+};
+
+const createPreTree = (routes: NavigatorRoute[]) => {
+  const preTree: NavigatorRoute[] = [];
+
+  const iterateRoute = (
+    route: NavigatorRoute | NavigatorRoute[],
+    parent?: NavigatorRoute
+  ) => {
+    if (Array.isArray(route)) {
+      route.forEach((el) => iterateRoute(el));
+    } else if (route) {
+      const preTreeRoute = makePreTreeRoute(route);
+      if (parent) {
+        parent.children.push(preTreeRoute);
+      } else if (isPath(route.name)) {
+        const parent = getParentNode(preTree, route.name);
+        if (parent) {
+          parent.children = parent.children || [];
+          parent.children.push(preTreeRoute);
+        }
+      } else {
+        preTree.push(preTreeRoute);
+      }
+      if (Array.isArray(route.children)) {
+        route.children.forEach((el: RouteNode) => iterateRoute(el, route));
+      }
+    }
+  };
+  iterateRoute(routes);
+  return preTree;
+};
 
 export function createRoutesTree(
   routes: RouteNode[],
   config: TreeRoutesConfig = {}
 ) {
+  const proceedRoutes: NavigatorRoute[] = config.useAdapter
+    ? createPreTree(routes)
+    : routes;
+
   const RoutesTree = new TreeRoutes(config);
 
   (function addRoutes(route: RouteNode[] | RouteNode, parent?: RouteNode) {
@@ -222,7 +268,7 @@ export function createRoutesTree(
         route.children.forEach((el: RouteNode) => addRoutes(el, routeNode));
       }
     }
-  })(routes);
+  })(proceedRoutes);
 
   return RoutesTree;
 }

@@ -1,3 +1,6 @@
+import { NavigatorRoute } from "..";
+import RouteNode from "./RouteNode";
+
 export const removeTrailingSlash = (string: string) => string.replace(/\/$/, "");
 
 export const isWindow = () => typeof window !== 'undefined' && window !== null;
@@ -68,12 +71,42 @@ export const buildPathFromDotPath = (path: string) => path ? '/'+ path.split('.'
 export const getParentPath = (path: string) => {
   const segments = path.split('.');
   segments.splice(-1, 1);
-  return segments.length ? segments.join('') : segments.join('');
+  const joiner = segments.length ?  '.' : '';
+  return segments.join(joiner);
 };
 
 export const isPath = (name: string) => name.includes('.');
+
+export const separateFromUrlParams = (name: string) => {
+  if (name) {
+
+  }
+}
 
 export const cutName = (path: string) => {
   const segments = path.split('.');
   return segments.splice(-1, 1)[0];
 }
+
+export const getByPath = (routes: NavigatorRoute[] | RouteNode[], pathToRoute: string) => {
+  const segments = pathToRoute.split(".");
+  const stack = [...routes];
+  let resultNode: RouteNode | null = null;
+
+  while (stack.length && segments.length) {
+    const route = stack.shift();
+    const [segment] = segments;
+    if (route.name === segment) {
+      if (segments.length > 1) {
+        stack.push(...route.children);
+        segments.shift();
+        continue;
+      } else if (segments.length === 1) {
+        resultNode = route;
+        break;
+      }
+    }
+  }
+
+  return resultNode;
+};

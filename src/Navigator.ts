@@ -67,6 +67,9 @@ export class Navigator {
       useAdapter: this.config.useAdapter,
     });
 
+
+//    console.log('TREE::', this.tree);
+
     this.initialize();
     // this.buildHistory();
   }

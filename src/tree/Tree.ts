@@ -1,5 +1,5 @@
 import { NavigatorRoute } from "..";
-import { getParentPath, isPath, cutName } from "./utils";
+import { getParentPath, isPath, cutName, getByPath } from "./utils";
 import {
   ERROR_TREE_PARENT_DOESNT_EXIST,
   ERROR_TREE_NO_ROUTE,
@@ -30,7 +30,7 @@ export default class TreeRoutes {
       params: "",
       children: [],
     };
-    
+
     this.root = new RouteNode(rootData);
   }
 
@@ -72,24 +72,7 @@ export default class TreeRoutes {
   };
 
   private getByPath = (pathToRoute: string) => {
-    const segments = pathToRoute.split(".");
-    const stack = [...this.root.children];
-    let resultNode: RouteNode | null = null;
-
-    while (stack.length && segments.length) {
-      const route = stack.shift();
-      const [segment] = segments;
-      if (route.name === segment) {
-        if (segments.length > 1) {
-          stack.push(...route.children);
-          segments.shift();
-          continue;
-        } else if (segments.length === 1) {
-          resultNode = route;
-          break;
-        }
-      }
-    }
+    const resultNode = getByPath(this.root.children, pathToRoute);
     if (!resultNode) {
       this.errorLogger(ERROR_TREE_NO_ROUTE);
     }
@@ -189,7 +172,7 @@ export default class TreeRoutes {
 
 const getParentNode = (routes: RouteNode[], path: string) => {
   const parentPath = getParentPath(path);
-  const parent = routes.find((el: NavigatorRoute) => el.name === parentPath);
+  const parent = getByPath(routes, parentPath);
   return parent;
 };
 
@@ -219,10 +202,11 @@ const createPreTree = (routes: NavigatorRoute[]) => {
   const iterateRoute = (
     route: NavigatorRoute | NavigatorRoute[],
     parent?: NavigatorRoute
-  ) => {
+  ) => { 
     if (Array.isArray(route)) {
       route.forEach((el) => iterateRoute(el));
     } else if (route) {
+     
       const preTreeRoute = makePreTreeRoute(route);
       if (parent) {
         parent.children.push(preTreeRoute);
@@ -238,9 +222,15 @@ const createPreTree = (routes: NavigatorRoute[]) => {
       if (Array.isArray(route.children)) {
         route.children.forEach((el: RouteNode) => iterateRoute(el, route));
       }
+
+      if (route.name === 'school.grades.grade') {
+        console.log('!!!!', route, preTreeRoute, parent);
+      }
     }
   };
   iterateRoute(routes);
+
+  console.log('pretree', preTree);
   return preTree;
 };
 

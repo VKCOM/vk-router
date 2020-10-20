@@ -37,7 +37,6 @@ export const getQueryParams = (path: string) => {
   return decodedQueryString;
 };
 
-// TODO
 export const getUrlParams = (url: string) => {
   const decodedQueryString: Record<string, any> = {};
   const processedString = url.slice(url.indexOf("?") + 1);
@@ -145,3 +144,5 @@ export const deepEqual = (object1: any, object2: any, strictValueCompare:boolean
 
   return true;
 };
+
+export const isChildRoute = (route: string) => route.includes('.');

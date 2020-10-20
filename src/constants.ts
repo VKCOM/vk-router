@@ -7,4 +7,3 @@ export const ERROR_HAS_TO_BE_ROUTE = 'Should have route in query params';
 export const ERROR_ROUTE_NOT_REGISTERED = 'Route is not registered';
 export const ERROR_NODE_TO_REMOVE_NOT_EXIST = 'Node to remove does not exist'
 export const ERROR_PARENT_DOESNT_EXIST = 'Parent does not exist';
-// EVENTS

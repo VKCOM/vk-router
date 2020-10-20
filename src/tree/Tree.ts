@@ -24,12 +24,13 @@ export default class TreeRoutes {
     if (config.errorLogger) {
       this.errorLogger = config.errorLogger;
     }
-    const rootData = {
+    const rootData: RouteNode = {
       name: "",
       path: "",
       params: "",
-      children: [] as RouteNode[],
+      children: [],
     };
+    
     this.root = new RouteNode(rootData);
   }
 

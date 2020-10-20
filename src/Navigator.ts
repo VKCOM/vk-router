@@ -3,6 +3,7 @@ import {
   buildQueryParams,
   getQueryParams,
   urlToPath,
+  isChildRoute,
   deepEqual,
 } from "./utils";
 import {
@@ -25,6 +26,7 @@ import {
 } from "./constants";
 import browser from "./browser";
 import TreeRoutes from "./tree/Tree";
+import { NavigatorDone } from ".";
 
 const defaultConfig: NavigatorConfig = {
   defaultRoute: "default",
@@ -71,13 +73,12 @@ export class Navigator {
 
   private initialize = () => {
     let firstRouteName = (this.routes[0] || {}).name;
-
+    const routeName = this.config.defaultRoute || firstRouteName;
     this.defaultState = {
-      route: this.config.defaultRoute || firstRouteName,
+      route: routeName,
       subroute: null,
       params: {
-        route: {},
-        subroute: {},
+        [routeName]: {}
       },
     };
 
@@ -270,23 +271,20 @@ export class Navigator {
     routeName: string,
     routeParams: NavigatorParams = {},
   ) => {
+    const prevState = this.getState();
     const routeNodeData = this.tree.getRouteNode(routeName); 
-
     const { routePath, routeNode } = routeNodeData || {};
     const { data: routeData } = routeNode || { data: null };
     const subRouteKey = this.config.subRouteKey;
-    const prevState = this.getState();
     
     let params: NavigatorParams = {
-      [routeName]: routeParams || { [routeName] : {}},
+      [routeName]: routeParams || {},
     };
-
+ 
     if (routeNode?.parent?.name) {
       params = {
-          [routeName]: {
-            ...(prevState.params[routeNode.parent.name] || {}),
-            ...(routeParams || {}),
-          }
+        [routeNode.parent.name]: prevState.params[routeNode.parent.name] || {},
+        [routeName]: routeParams || {}
       }
     }
 
@@ -314,7 +312,7 @@ export class Navigator {
     routeName: string,
     routeParams?: any,
     options: NavigatorOptions = {},
-    done?: any
+    done?: NavigatorDone
   ) => {
     const { newState, routeData } = this.makeState(
       routeName,
@@ -340,7 +338,7 @@ export class Navigator {
       this.updateUrl(prevState, { fakeEntry: true });
     }
 
-    if (typeof done === "function") {
+    if (done) {
       done(newState);
     }
   };
@@ -486,8 +484,6 @@ export class Navigator {
   ) => {
     this.routeHandlerCollection[routeName] = routerHandler;
   };
-
-  // public canDeactivate = () => {};
 }
 
 export type CreateNavigator = (

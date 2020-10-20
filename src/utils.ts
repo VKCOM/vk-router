@@ -120,7 +120,7 @@ export const urlToPath = (url: string, options: any) => {
   );
 };
 
-export const deepEqual = (object1: any, object2: any) => {
+export const deepEqual = (object1: any, object2: any, strictValueCompare:boolean = false) => {
   if (!object1 || !object2) {
     return false;
   }
@@ -137,7 +137,7 @@ export const deepEqual = (object1: any, object2: any) => {
     const areObjects = isObject(val1) && isObject(val2);
     if (
       (areObjects && !deepEqual(val1, val2)) ||
-      (!areObjects && val1 !== val2)
+      (!areObjects && (strictValueCompare ? val1 !== val2 : val1 != val2))
     ) {
       return false;
     }

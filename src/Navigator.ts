@@ -27,19 +27,12 @@ import browser from "./browser";
 import TreeRoutes from "./tree/Tree";
 
 const defaultConfig: NavigatorConfig = {
-  defaultRoute: "/",
+  defaultRoute: "default",
   base: "",
   subRouteKey: "subRoute",
   routeKey: "route",
 };
 
-/**
- * TODO:
- *   - required parameters per route
- *   - canActivate Hook
- *   - canDeactivate Hook
- *   - transition Hook
- */
 export class Navigator {
   public state: NavigatorState;
   public prevState: NavigatorState;
@@ -99,6 +92,7 @@ export class Navigator {
     return {
       ...state,
       name: state.route,
+      subroute: state.subroute
     };
   };
 
@@ -326,8 +320,6 @@ export class Navigator {
       routeName,
       routeParams,
     );
-
-    console.log('go to', routeName, routeParams);
  
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
@@ -473,7 +465,14 @@ export class Navigator {
       state.route === prevState.route && state.subroute === routeName;
 
     let res = false;
+    
     if (!strictCompare) {
+      const isChildOfRoute = routeName.includes(state.route);
+      if (isChildOfRoute) {
+        const areSame = deepEqual(state.params[state.route], compareState.params[compareState.route], false);
+        return areSame; 
+      }
+     
       res = state.route === routeName || state.subroute === routeName;
     }
 

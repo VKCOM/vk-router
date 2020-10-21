@@ -283,10 +283,10 @@ export class Navigator {
     let params: NavigatorParams = {
       [routeName]: routeParams || {},
     };
- 
+      
     if (routeNode?.parent?.name) {
       params = {
-        [routeNode.parent.name]: prevState.params[routeNode.parent.name] || {},
+        ...prevState.params,
         [routeName]: routeParams || {}
       }
     }

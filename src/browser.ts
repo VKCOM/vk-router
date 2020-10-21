@@ -56,6 +56,7 @@ const onLinkListener = (navigator: any, opts: any) => {
     if (!el.href) return;
 
     const toRouteState = navigator.buildState(el.href);
+    console.log('goTO', toRouteState);
     if (toRouteState) {
       e.preventDefault();
       const routeName = toRouteState.route || toRouteState.subroute;

@@ -1,5 +1,5 @@
 import { Browser } from "./types";
-
+import { get } from './utils';
 const value = (arg: any) => () => arg;
 const noop = () => {};
 
@@ -56,11 +56,11 @@ const onLinkListener = (navigator: any, opts: any) => {
     if (!el.href) return;
 
     const toRouteState = navigator.buildState(el.href);
-    console.log('goTO', toRouteState);
+    console.log('goTo', toRouteState);
     if (toRouteState) {
       e.preventDefault();
       const routeName = toRouteState.route || toRouteState.subroute;
-      const params = toRouteState.params[routeName];
+      const params = get(toRouteState.params, routeName, {});
 
       navigator.go(routeName, params);
     }

@@ -1,3 +1,5 @@
+import { Navigator } from "./Navigator";
+
 export type NavigatorErrorLogger = (errorStr: string) => void;
 
 export interface NavigatorConfig {
@@ -12,6 +14,13 @@ export interface NavigatorConfig {
   routeKey?: string;
   errorLogger?: NavigatorErrorLogger;
 }
+
+export interface NavigatorGetStateOptions {
+  withoutHistory?: boolean
+  routeParams?: boolean
+}
+
+export type NavigatorGetState = (options?: NavigatorGetStateOptions) => NavigatorState;
 
 export interface URLParamsCollection {
   [key: string]: any;

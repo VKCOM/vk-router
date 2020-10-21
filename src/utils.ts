@@ -4,6 +4,20 @@ export const getTarget = (path: string) =>
 export const isObject = (obj: any) =>
   (typeof obj === "object" || typeof obj === "function") && obj !== null;
 
+export const get = (obj: any, path: string, def: any = undefined) => {
+	const fullPath = path
+		.replace(/\[/g, '.')
+		.replace(/]/g, '')
+		.split('.')
+		.filter(Boolean);
+
+	return fullPath.every(everyFunc) ? obj : def;
+
+	function everyFunc(step: string) {
+		return !(step && (obj = obj[step]) === undefined);
+	}
+}
+
 export const set = (obj: Record<string, any>, path: string, value: any) => {
   const pList = Array.isArray(path) ? path : path ? path.split(".") : [];
   const len = pList.length;

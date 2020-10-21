@@ -9,6 +9,7 @@ import {
 import {
   NavigatorRoute,
   NavigatorState,
+  NavigatorGetState,
   NavigatorHistoryRecord,
   NavigatorSubscriber,
   NavigatorConfig,
@@ -434,16 +435,31 @@ export class Navigator {
     this.removePopStateListener();
   };
 
-  public getState = (withoutHistory: boolean = false) => {
+  public getState: NavigatorGetState = (options = {}) => {
+    const {
+      withoutHistory = false,
+      routeParams = false,
+    } = options;
+    
+    let State = { ...this.state };
     if (withoutHistory) {
       const { history, ...state } = this.state;
-      return state;
+      State = state;
     }
-    return this.state;
+    if (routeParams) {
+      State = {
+        ...State,
+        params: {
+          ...(State.params[State.route] || {}),
+          ...(State.params[State.subroute] || {}),
+        }
+      }
+    }
+    return State;
   };
 
-  public getPrevState = (withoutHistory: boolean = false) => {
-    if (withoutHistory) {
+  public getPrevState: NavigatorGetState= (options = {}) => {
+    if (options.withoutHistory) {
       const { history, ...state } = this.prevState;
       return state;
     }
@@ -457,8 +473,8 @@ export class Navigator {
     ignoreParams: boolean = false
     // TODO: ignoreParams: boolean = false
   ) => {
-    const state = this.getState(true);
-    const prevState = this.getPrevState(true);
+    const state = this.getState({ withoutHistory: true });
+    const prevState = this.getPrevState({ withoutHistory: true });
     const { newState: compareState } =
       this.makeState(routeName, routeParams) || {};
 

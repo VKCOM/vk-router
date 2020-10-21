@@ -361,7 +361,8 @@ export class Navigator {
 
     const buildedSearch = buildQueryParams(state);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
-    const url = `${window.location.origin}${this.config.base}${search}`;
+    const location = window.location.href.split('?')[0];
+    const url = `${location}${this.config.base}${search}`;
 
     if (options.replace) {
       browser.replaceState(stateToHistory, title, url);

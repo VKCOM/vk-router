@@ -222,10 +222,6 @@ const createPreTree = (routes: NavigatorRoute[]) => {
       if (Array.isArray(route.children)) {
         route.children.forEach((el: RouteNode) => iterateRoute(el, route));
       }
-
-      if (route.name === 'school.grades.grade') {
-        console.log('!!!!', route, preTreeRoute, parent);
-      }
     }
   };
   iterateRoute(routes);

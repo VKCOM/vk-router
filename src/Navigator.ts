@@ -449,6 +449,7 @@ export class Navigator {
     if (routeParams) {
       State = {
         ...State,
+        name: State.subroute || State.route,
         params: {
           ...(State.params[State.route] || {}),
           ...(State.params[State.subroute] || {}),

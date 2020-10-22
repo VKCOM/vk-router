@@ -224,9 +224,8 @@ const createPreTree = (routes: NavigatorRoute[]) => {
       }
     }
   };
+  
   iterateRoute(routes);
-
-  console.log('pretree', preTree);
   return preTree;
 };
 

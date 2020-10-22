@@ -256,7 +256,7 @@ export class Navigator {
     const { newState: state } = this.makeState(routeName, params);
     const buildedSearch = buildQueryParams(state);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
-    const url = `${window.location.origin}${this.config.base}${search}`;
+    const url = `${this.config.base}${search}`;
     // console.log(url);
     return url;
   };

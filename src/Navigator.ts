@@ -3,7 +3,6 @@ import {
   buildQueryParams,
   getQueryParams,
   urlToPath,
-  isChildRoute,
   deepEqual,
 } from "./utils";
 import {
@@ -67,10 +66,7 @@ export class Navigator {
       errorLogger: this.errorLogger,
       useAdapter: this.config.useAdapter,
     });
-
-
-//    console.log('TREE::', this.tree);
-
+  
     this.initialize();
     // this.buildHistory();
   }
@@ -79,6 +75,7 @@ export class Navigator {
     let firstRouteName = (this.routes[0] || {}).name;
     const routeName = this.config.defaultRoute || firstRouteName;
     this.defaultState = {
+      name: routeName,
       route: routeName,
       subroute: null,
       params: {
@@ -198,6 +195,7 @@ export class Navigator {
 
     if (RouteNode) {
       State = {
+        name: route,
         route,
         subroute,
         params,
@@ -293,6 +291,7 @@ export class Navigator {
     }
 
     let newState: NavigatorState = {
+      name: routePath,
       route: routePath,
       subroute: null,
       params,
@@ -441,11 +440,18 @@ export class Navigator {
       routeParams = false,
     } = options;
     
-    let State = { ...this.state };
+    let State = { ...this.state,
+      name: this.state.subroute || this.state.route,
+    };
+    
     if (withoutHistory) {
       const { history, ...state } = this.state;
-      State = state;
+      State = {
+        ...state,
+        name: state.subroute || state.route,
+      };
     }
+
     if (routeParams) {
       State = {
         ...State,

@@ -75,7 +75,6 @@ export class Navigator {
     let firstRouteName = (this.routes[0] || {}).name;
     const routeName = this.config.defaultRoute || firstRouteName;
     this.defaultState = {
-      name: routeName,
       route: routeName,
       subroute: null,
       params: {
@@ -291,7 +290,6 @@ export class Navigator {
     }
 
     let newState: NavigatorState = {
-      name: routePath,
       route: routePath,
       subroute: null,
       params,

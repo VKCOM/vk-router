@@ -28,43 +28,39 @@ export const merge = (object: Record<string, any>, other: Record<string, any>) =
   return merged;
 };
 
-const onLinkListener = (navigator: any, opts: any) => {
-  function which(e: any) {
-    e = e || window.event;
-    return null === e.which ? e.button : e.which;
+const which = (e: any) => {
+  e = e || window.event;
+  return null === e.which ? e.button : e.which;
+}
+
+const onLinkListener = (navigator: any, opts: any) => (e: any) => {
+  // console.log('listener', e);
+  if (1 !== which(e)) return;
+  
+  if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+  if (e.defaultPrevented) return;
+
+  // ensure link
+  let el = e.target;
+  while (el && "A" !== el.nodeName) el = el.parentNode;
+  if (!el || "A" !== el.nodeName) return;
+  
+  if (el.hasAttribute("download") || el.getAttribute("rel") === "external")
+    return;
+
+  // check target
+  if (el.target) return;
+  if (!el.href) return;
+
+  const toRouteState = navigator.buildState(el.href);
+  // console.log('goTo', toRouteState);
+  if (toRouteState) {
+    e.preventDefault();
+    const routeName = toRouteState.page || toRouteState.modal;
+    const params = get(toRouteState.params, routeName, {});
+
+    navigator.go(routeName, params);
   }
-
-  return function onclick(e: any) {
-    if (1 !== which(e)) return;
-
-    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-    if (e.defaultPrevented) return;
-
-    // ensure link
-    var el = e.target;
-    while (el && "A" !== el.nodeName) el = el.parentNode;
-    if (!el || "A" !== el.nodeName) return;
-
-    // Ignore if tag has
-    // 1. "download" attribute
-    // 2. rel="external" attribute
-    if (el.hasAttribute("download") || el.getAttribute("rel") === "external")
-      return;
-
-    // check target
-    if (el.target) return;
-    if (!el.href) return;
-
-    const toRouteState = navigator.buildState(el.href);
-    // console.log('goTo', toRouteState);
-    if (toRouteState) {
-      e.preventDefault();
-      const routeName = toRouteState.route || toRouteState.subroute;
-      const params = get(toRouteState.params, routeName, {});
-
-      navigator.go(routeName, params);
-    }
-  };
 };
 
 const addLinkInterceptorListener = (navigator: Navigator, opts?: any) => {

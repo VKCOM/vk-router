@@ -69,9 +69,8 @@ export interface NavigatorSubRoutes {
 export interface NavigatorHistoryRecord extends NavigatorState {}
 
 export interface NavigatorState {
-  route: string;
-  name?: string;
-  subroute?: string;
+  page: string;
+  modal?: string;
   history?: NavigatorHistoryRecord[];
   params: NavigatorParams;
 }

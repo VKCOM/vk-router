@@ -5,17 +5,17 @@ export const isObject = (obj: any) =>
   (typeof obj === "object" || typeof obj === "function") && obj !== null;
 
 export const get = (obj: any, path: string, def: any = undefined) => {
-	const fullPath = path
+  const everyFunc = (step: string) => {
+		return !(step && (obj = obj[step]) === undefined);
+  }
+  
+  const fullPath = path
 		.replace(/\[/g, '.')
 		.replace(/]/g, '')
 		.split('.')
 		.filter(Boolean);
 
 	return fullPath.every(everyFunc) ? obj : def;
-
-	function everyFunc(step: string) {
-		return !(step && (obj = obj[step]) === undefined);
-	}
 }
 
 export const set = (obj: Record<string, any>, path: string, value: any) => {
@@ -118,7 +118,7 @@ export const urlToPath = (url: string, options: any) => {
 
   const pathParts = path.match(/^(.+?)(#.+?)?(\?.+)?$/);
 
-  if (!pathParts) throw new Error(`[router5] Could not parse url ${url}`);
+  if (!pathParts) return '';
 
   const pathname = pathParts[1];
   const hash = pathParts[2] || "";

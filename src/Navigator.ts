@@ -66,7 +66,7 @@ export class Navigator {
       errorLogger: this.errorLogger,
       useAdapter: this.config.useAdapter,
     });
-  
+
     this.initialize();
     // this.buildHistory();
   }
@@ -75,10 +75,10 @@ export class Navigator {
     let firstRouteName = (this.routes[0] || {}).name;
     const routeName = this.config.defaultRoute || firstRouteName;
     this.defaultState = {
-      route: routeName,
-      subroute: null,
+      page: routeName,
+      modal: null,
       params: {
-        [routeName]: {}
+        [routeName]: {},
       },
     };
 
@@ -92,17 +92,18 @@ export class Navigator {
   private adapter = (state: NavigatorState) => {
     return {
       ...state,
-      name: state.route,
-      subroute: state.subroute
+      name: state.page,
+      modal: state.modal,
     };
   };
 
+  // build entries to history object and gather params from url
   private buildHistory = () => {
     const state = this.getState();
     let routeStr = "";
-    const segments = state.route.includes(".")
-      ? state.route.split(".")
-      : [state.route];
+    const segments = state.page.includes(".")
+      ? state.page.split(".")
+      : [state.page];
     const routeSegments = segments.map((segment: string, idx: number) => {
       routeStr += idx !== 0 ? `.${segment}` : segment;
       return routeStr;
@@ -110,12 +111,12 @@ export class Navigator {
 
     const routeEntries: NavigatorState[] = routeSegments.map(
       (routeName: string) => ({
-        route: routeName,
+        page: routeName,
         params: state.params[routeName],
       })
     );
 
-    if (state.subroute) {
+    if (state.modal) {
       routeEntries.push(state);
     }
     this.history = [...routeEntries];
@@ -157,8 +158,9 @@ export class Navigator {
   private replaceState = (state: NavigatorState) => {
     const prevState = { ...this.state };
     const nextState = { ...state };
+
     if (!deepEqual(prevState, nextState)) {
-      const handlerCanActivate = this.routeHandlerCollection[nextState.route];
+      const handlerCanActivate = this.routeHandlerCollection[nextState.page];
       // handlerCanActivateSubroute = this.routeHandlerCollection[nextState.subroute];
       this.state = nextState;
       this.prevState = prevState;
@@ -174,7 +176,7 @@ export class Navigator {
     const nextState = { ...this.state, ...state };
 
     if (!deepEqual(prevState, nextState)) {
-      const handlerCanActivate = this.routeHandlerCollection[nextState.route];
+      const handlerCanActivate = this.routeHandlerCollection[nextState.page];
       // handlerCanActivateSubroute = this.routeHandlerCollection[nextState.subroute];
       this.state = nextState;
       this.prevState = prevState;
@@ -187,21 +189,20 @@ export class Navigator {
 
   private buildState = (url: string) => {
     const path = urlToPath(url, this.config);
-    const { route, subroute = null, params = {} } = getQueryParams(path);
-    const RouteNode = this.tree.getRouteNode(route);
+    const { page, modal = null, ...params } = getQueryParams(path);
+    const RouteNode = this.tree.getRouteNode(page);
 
     let State: NavigatorState = this.defaultState;
 
     if (RouteNode) {
       State = {
-        name: route,
-        route,
-        subroute,
-        params,
+        page,
+        modal,
+        params: params || {},
       };
-    } 
+    }
 
-    if (!State.route) {
+    if (!State.page) {
       this.errorLogger(ERROR_HAS_TO_BE_ROUTE);
       return this.defaultState;
     }
@@ -251,7 +252,13 @@ export class Navigator {
     params: NavigatorParams = {}
   ): string => {
     const { newState: state } = this.makeState(routeName, params);
-    const buildedSearch = buildQueryParams(state);
+    const { page, modal, params: stateParams } = state;
+    const stateToUrl = {
+      page,
+      modal,
+      ...stateParams,
+    };
+    const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
     const url = `${this.config.base}${search}`;
     // console.log(url);
@@ -263,46 +270,52 @@ export class Navigator {
     params: NavigatorParams = {}
   ): string => {
     const { newState: state } = this.makeState(routeName, params);
-    const buildedSearch = buildQueryParams(state);
+    const { page, modal, params: stateParams } = state;
+    const stateToUrl = {
+      page,
+      modal,
+      ...stateParams,
+    };
+    const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
     return `${this.config.base}${search}`;
   };
 
   private makeState = (
     routeName: string,
-    routeParams: NavigatorParams = {},
+    routeParams: NavigatorParams = {}
   ) => {
     const prevState = this.getState();
-    const routeNodeData = this.tree.getRouteNode(routeName); 
+    const routeNodeData = this.tree.getRouteNode(routeName);
     const { routePath, routeNode } = routeNodeData || {};
     const { data: routeData } = routeNode || { data: null };
     const subRouteKey = this.config.subRouteKey;
-    
+
     let params: NavigatorParams = {
       [routeName]: routeParams || {},
     };
-      
+
     if (routeNode?.parent?.name) {
       params = {
         ...prevState.params,
-        [routeName]: routeParams || {}
-      }
+        [routeName]: routeParams || {},
+      };
     }
 
     let newState: NavigatorState = {
-      route: routePath,
-      subroute: null,
+      page: routePath,
+      modal: null,
       params,
     };
 
     if (routeNode?.data?.[subRouteKey]) {
       newState = {
-        route: prevState.route,
+        page: prevState.page,
         params: {
           ...prevState.params,
-          [routeName]: routeParams || { [routeName] : {}},
+          [routeName]: routeParams || { [routeName]: {} },
         },
-        subroute: routePath,
+        modal: routePath,
       };
     }
 
@@ -315,11 +328,8 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
-    const { newState, routeData } = this.makeState(
-      routeName,
-      routeParams,
-    );
- 
+    const { newState, routeData } = this.makeState(routeName, routeParams);
+
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
 
@@ -350,16 +360,28 @@ export class Navigator {
     options: NavigatorOptions = {},
     title: string = ""
   ) => {
-    const stateToHistory = { ...state, counter: this.history.length - 1 };
+    const stateToHistory = {
+      ...state,
+      ...state.params,
+      counter: this.history.length - 1,
+    };
     if (options.fakeEntry) {
       const currentUrl = browser.getLocation(this.config);
       browser.pushState(stateToHistory, title, currentUrl);
       return;
     }
 
-    const buildedSearch = buildQueryParams(state);
+    const stateToUrl: Record<string, any> = {
+      page: state.page,
+      ...state.params,
+    };
+    if (state.modal) {
+      stateToUrl.modal = state.modal;
+    }
+
+    const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
-    const location = window.location.href.split('?')[0];
+    const location = window.location.href.split("?")[0];
     const url = `${location}${this.config.base}${search}`;
 
     if (options.replace) {
@@ -400,8 +422,8 @@ export class Navigator {
 
     const initState = this.getState();
 
-    if (initState && initState.route) {
-      const routeName = initState.subroute || initState.route;
+    if (initState && initState.page) {
+      const routeName = initState.modal || initState.page;
       const params = initState.params[routeName];
       this.go(routeName, params, { firstLoad: true });
     } else if (startRoute) {
@@ -433,37 +455,32 @@ export class Navigator {
   };
 
   public getState: NavigatorGetState = (options = {}) => {
-    const {
-      withoutHistory = false,
-      routeParams = false,
-    } = options;
-    
-    let State = { ...this.state,
-      name: this.state.subroute || this.state.route,
-    };
-    
+    const { withoutHistory = false, routeParams = false } = options;
+
+    let State = { ...this.state, name: this.state.modal || this.state.page };
+
     if (withoutHistory) {
       const { history, ...state } = this.state;
       State = {
         ...state,
-        name: state.subroute || state.route,
+        name: state.modal || state.page,
       };
     }
 
     if (routeParams) {
       State = {
         ...State,
-        name: State.subroute || State.route,
+        name: State.modal || State.page,
         params: {
-          ...(State.params[State.route] || {}),
-          ...(State.params[State.subroute] || {}),
-        }
-      }
+          ...(State.params[State.page] || {}),
+          ...(State.params[State.modal] || {}),
+        },
+      };
     }
     return State;
   };
 
-  public getPrevState: NavigatorGetState= (options = {}) => {
+  public getPrevState: NavigatorGetState = (options = {}) => {
     if (options.withoutHistory) {
       const { history, ...state } = this.prevState;
       return state;
@@ -485,18 +502,22 @@ export class Navigator {
 
     const areSame = deepEqual(state, compareState);
     const onSubRoute =
-      state.route === prevState.route && state.subroute === routeName;
+      state.page === prevState.page && state.modal === routeName;
 
     let res = false;
-    
+
     if (!strictCompare) {
-      const isChildOfRoute = routeName.includes(state.route);
+      const isChildOfRoute = routeName.includes(state.page);
       if (isChildOfRoute) {
-        const areSame = deepEqual(state.params[state.route], compareState.params[compareState.route], false);
-        return areSame; 
+        const areSame = deepEqual(
+          state.params[state.page],
+          compareState.params[compareState.page],
+          false
+        );
+        return areSame;
       }
-     
-      res = state.route === routeName || state.subroute === routeName;
+
+      res = state.page === routeName || state.modal === routeName;
     }
 
     res = areSame || onSubRoute;

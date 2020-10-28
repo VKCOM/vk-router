@@ -4,6 +4,7 @@ import {
   getQueryParams,
   urlToPath,
   deepEqual,
+  isChildRoute,
 } from "./utils";
 import {
   NavigatorRoute,
@@ -68,7 +69,7 @@ export class Navigator {
     });
 
     this.initialize();
-    // this.buildHistory();
+    this.buildHistory();
   }
 
   private initialize = () => {
@@ -90,46 +91,45 @@ export class Navigator {
   };
 
   private adapter = (state: NavigatorState) => {
-    return {
-      ...state,
-      name: state.page,
-      modal: state.modal,
-    };
+    return state;
   };
 
   // build entries to history object and gather params from url
   private buildHistory = () => {
-    const state = this.getState();
-    let routeStr = "";
-    const segments = state.page.includes(".")
-      ? state.page.split(".")
-      : [state.page];
-    const routeSegments = segments.map((segment: string, idx: number) => {
-      routeStr += idx !== 0 ? `.${segment}` : segment;
-      return routeStr;
+    const { page, params } = this.getState();
+    const activeNodes = this.getActiveNodes(page);
+    activeNodes.pop() // remove this.state
+    // activeRouteNodes.concat(activeModalNodes);
+    const paramsToState: Record<string, any> = {};
+    if(!isChildRoute(page)) return;
+    
+    activeNodes.forEach((node) => {
+      paramsToState[node.routePath] = params[node.routePath];
+      const state:NavigatorState = {
+        page: node.routePath,
+        modal: null,
+        params: { 
+          ...paramsToState
+        },
+      }
+      this.history.push(state);
+      this.updateUrl(state)
     });
-
-    const routeEntries: NavigatorState[] = routeSegments.map(
-      (routeName: string) => ({
-        page: routeName,
-        params: state.params[routeName],
-      })
-    );
-
-    if (state.modal) {
-      routeEntries.push(state);
-    }
-    this.history = [...routeEntries];
-    routeEntries.forEach((state: NavigatorState, idx: number) =>
-      this.updateUrl(state, { replace: !idx })
-    );
-    // console.log('history', this.history);
   };
 
   private onPopState = (event: PopStateEvent) => {
-    const pointer = event.state.counter;
+    const pointer = event.state?.counter;
     const nextState = this.history[pointer];
-    this.replaceState(nextState);
+    const [rootState] = this.history;
+    
+    if (pointer !== undefined) {
+      console.log('replacing state', pointer);
+      //this.updateUrl(nextState, { replace: !pointer }); 
+      this.replaceState(nextState);
+    } else {
+      this.replaceState(rootState);
+      this.updateUrl(rootState, { replace: true })
+    }
   };
 
   private broadCastState = () => {
@@ -281,14 +281,37 @@ export class Navigator {
     return `${this.config.base}${search}`;
   };
 
+  private getActiveNodes = (routeName: string) => {
+    const activeNodes = [];
+    if (routeName && routeName.includes(".")) {
+      let path = "";
+      const segments = routeName.split(".");
+      segments.forEach((segment: string, idx: number) => {
+        path += idx ? `.${segment}` : segment;
+
+        const node = this.tree.getRouteNode(path) || {};
+        if (node) {
+          activeNodes.push(node);
+        }
+      });
+    } else if (routeName) {
+      const node = this.tree.getRouteNode(routeName);
+      if (node) {
+        activeNodes.push(node);
+      }
+    }
+
+    return activeNodes;
+  };
+
   private makeState = (
     routeName: string,
     routeParams: NavigatorParams = {}
   ) => {
     const prevState = this.getState();
-    const routeNodeData = this.tree.getRouteNode(routeName);
-    const { routePath, routeNode } = routeNodeData || {};
+    const { routePath, routeNode } = this.tree.getRouteNode(routeName) || {};
     const { data: routeData } = routeNode || { data: null };
+
     const subRouteKey = this.config.subRouteKey;
 
     let params: NavigatorParams = {
@@ -296,8 +319,15 @@ export class Navigator {
     };
 
     if (routeNode?.parent?.name) {
-      params = {
-        ...prevState.params,
+      const activeParams: Record<string, any> = {};
+      const activeNodes = this.getActiveNodes(routeName);
+
+      activeNodes.forEach((node) => {
+        activeParams[node.routePath] = prevState.params[node.routePath] || {};
+      });
+      
+      params = { 
+        ...activeParams,
         [routeName]: routeParams || {},
       };
     }
@@ -423,9 +453,12 @@ export class Navigator {
     const initState = this.getState();
 
     if (initState && initState.page) {
+      
       const routeName = initState.modal || initState.page;
       const params = initState.params[routeName];
+
       this.go(routeName, params, { firstLoad: true });
+      
     } else if (startRoute) {
       this.go(startRoute, params[startRoute], options);
     } else {
@@ -457,20 +490,18 @@ export class Navigator {
   public getState: NavigatorGetState = (options = {}) => {
     const { withoutHistory = false, routeParams = false } = options;
 
-    let State = { ...this.state, name: this.state.modal || this.state.page };
+    let State = { ...this.state };
 
     if (withoutHistory) {
       const { history, ...state } = this.state;
       State = {
         ...state,
-        name: state.modal || state.page,
       };
     }
 
     if (routeParams) {
       State = {
         ...State,
-        name: State.modal || State.page,
         params: {
           ...(State.params[State.page] || {}),
           ...(State.params[State.modal] || {}),
@@ -490,38 +521,28 @@ export class Navigator {
 
   public isActive = (
     routeName: string,
-    routeParams: NavigatorParams = {},
+    routeParams?: NavigatorParams,
     strictCompare: boolean = true,
     ignoreParams: boolean = false
-    // TODO: ignoreParams: boolean = false
   ) => {
     const state = this.getState({ withoutHistory: true });
-    const prevState = this.getPrevState({ withoutHistory: true });
+    const activeRouteNodes = this.getActiveNodes(state.page)
+    const acitveModalNodes = this.getActiveNodes(state.modal);
+    const activeNodes = activeRouteNodes.concat(acitveModalNodes);
+    const isActiveNode = !!activeNodes.find((el) => el.routePath === routeName);
+    const hasParamsInState = deepEqual(state.params[routeName], routeParams);
+
     const { newState: compareState } =
       this.makeState(routeName, routeParams) || {};
 
-    const areSame = deepEqual(state, compareState);
-    const onSubRoute =
-      state.page === prevState.page && state.modal === routeName;
-
-    let res = false;
-
-    if (!strictCompare) {
-      const isChildOfRoute = routeName.includes(state.page);
-      if (isChildOfRoute) {
-        const areSame = deepEqual(
-          state.params[state.page],
-          compareState.params[compareState.page],
-          false
-        );
-        return areSame;
-      }
-
-      res = state.page === routeName || state.modal === routeName;
+    const areSameStates = deepEqual(state, compareState);
+    if (strictCompare) {
+      return areSameStates;
+    } else if (routeParams) {
+      return areSameStates || (isActiveNode && hasParamsInState);
     }
 
-    res = areSame || onSubRoute;
-    return res;
+    return isActiveNode;
   };
 
   public canActivate = (

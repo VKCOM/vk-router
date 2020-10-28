@@ -45,7 +45,14 @@ export const getQueryParams = (path: string) => {
   for (const piece of queryStringPieces) {
     let [key, value] = piece.split("=");
     value = value || "";
-    set(decodedQueryString, key, value);
+    if(key.includes('.')) {
+      const segments = key.split('.');
+      const paramName = segments.pop();
+      const nodeKey = segments.join('.');
+      decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
+      decodedQueryString[nodeKey][paramName] = value;
+    }
+    decodedQueryString[key] = value;
   }
 
   return decodedQueryString;
@@ -62,8 +69,14 @@ export const getUrlParams = (url: string) => {
   for (const piece of queryStringPieces) {
     let [key, value] = piece.split("=");
     value = value || "";
-
-    set(decodedQueryString, key, value);
+    if(key.includes('.')) {
+      const segments = key.split('.');
+      const paramName = segments.pop();
+      const nodeKey = segments.join('.');
+      decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
+      decodedQueryString[nodeKey][paramName] = value;
+    }
+    decodedQueryString[key] = value;
   }
 
   return decodedQueryString;
@@ -78,6 +91,7 @@ export const buildQueryParams = (
   }
 
   const pairs: any[] = Object.entries(queryObj)
+    .filter(([, val]) => !!val)
     .map(([key, val]) => {
       if (typeof val === "object") {
         return buildQueryParams(val, nested + `${key}.`);

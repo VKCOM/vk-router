@@ -57,8 +57,7 @@ const onLinkListener = (navigator: any, opts: any) => (e: any) => {
   if (toRouteState) {
     e.preventDefault();
     const routeName = toRouteState.page || toRouteState.modal;
-    const params = get(toRouteState.params, routeName, {});
-
+    const params = toRouteState.params[routeName] || {};
     navigator.go(routeName, params);
   }
 };

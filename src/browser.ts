@@ -42,7 +42,7 @@ const onLinkListener = (navigator: any, opts: any) => (e: any) => {
 
   // ensure link
   let el = e.target;
-  while (el && "A" !== el.nodeName) el = el.parentNode;
+  while (el && "A" !== el.nodeName && 'BUTTON' !== el.nodeName) el = el.parentNode;
   if (!el || "A" !== el.nodeName) return;
   
   if (el.hasAttribute("download") || el.getAttribute("rel") === "external")
@@ -53,7 +53,7 @@ const onLinkListener = (navigator: any, opts: any) => (e: any) => {
   if (!el.href) return;
 
   const toRouteState = navigator.buildState(el.href);
-  // console.log('goTo', toRouteState);
+  
   if (toRouteState) {
     e.preventDefault();
     const routeName = toRouteState.page || toRouteState.modal;

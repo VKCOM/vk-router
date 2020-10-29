@@ -70,6 +70,8 @@ export class Navigator {
 
     this.initialize();
     this.buildHistory();
+
+    // console.log("tree", this.tree, this.history);
   }
 
   private initialize = () => {
@@ -98,38 +100,43 @@ export class Navigator {
   private buildHistory = () => {
     const { page, params } = this.getState();
     const activeNodes = this.getActiveNodes(page);
-    activeNodes.pop() // remove this.state
-    // activeRouteNodes.concat(activeModalNodes);
-    const paramsToState: Record<string, any> = {};
-    if(!isChildRoute(page)) return;
+    //activeRouteNodes.concat(activeModalNodes);
     
+    if (activeNodes.length > 2) {
+      activeNodes.pop(); // remove started state
+    }
+    
+    const paramsToState: Record<string, any> = {};
+    //if (!isChildRoute(page)) return;
+
     activeNodes.forEach((node) => {
       paramsToState[node.routePath] = params[node.routePath];
-      const state:NavigatorState = {
+      const state: NavigatorState = {
         page: node.routePath,
         modal: null,
-        params: { 
-          ...paramsToState
+        params: {
+          ...paramsToState,
         },
-      }
+      };
       this.history.push(state);
-      this.updateUrl(state)
+      this.updateUrl(state);
     });
   };
 
   private onPopState = (event: PopStateEvent) => {
-    const pointer = event.state?.counter;
+    const pointer = (this.state.history.length - 1) <= event.state?.counter ? event.state?.counter : 0; 
     const nextState = this.history[pointer];
     const [rootState] = this.history;
     
     if (pointer !== undefined) {
-      console.log('replacing state', pointer);
-      //this.updateUrl(nextState, { replace: !pointer }); 
+      
+      this.updateUrl(nextState, { replace: !pointer });
       this.replaceState(nextState);
     } else {
       this.replaceState(rootState);
-      this.updateUrl(rootState, { replace: true })
+      this.updateUrl(rootState, { replace: true });
     }
+    
   };
 
   private broadCastState = () => {
@@ -325,8 +332,8 @@ export class Navigator {
       activeNodes.forEach((node) => {
         activeParams[node.routePath] = prevState.params[node.routePath] || {};
       });
-      
-      params = { 
+
+      params = {
         ...activeParams,
         [routeName]: routeParams || {},
       };
@@ -348,7 +355,6 @@ export class Navigator {
         modal: routePath,
       };
     }
-
     return { newState, routeData };
   };
 
@@ -362,6 +368,9 @@ export class Navigator {
 
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
+    
+    // console.log('goTo STATE', routeName, routeParams, newState, routeData);
+
 
     if (isBack) {
       this.history.pop();
@@ -373,7 +382,7 @@ export class Navigator {
     const prevState = this.getPrevState();
 
     if (routeData && routeData.updateUrl !== false) {
-      this.updateUrl(newState, {});
+      this.updateUrl(newState, options);
     } else {
       // fake enter for subroute page
       this.updateUrl(prevState, { fakeEntry: true });
@@ -453,12 +462,10 @@ export class Navigator {
     const initState = this.getState();
 
     if (initState && initState.page) {
-      
       const routeName = initState.modal || initState.page;
       const params = initState.params[routeName];
 
       this.go(routeName, params, { firstLoad: true });
-      
     } else if (startRoute) {
       this.go(startRoute, params[startRoute], options);
     } else {
@@ -526,7 +533,7 @@ export class Navigator {
     ignoreParams: boolean = false
   ) => {
     const state = this.getState({ withoutHistory: true });
-    const activeRouteNodes = this.getActiveNodes(state.page)
+    const activeRouteNodes = this.getActiveNodes(state.page);
     const acitveModalNodes = this.getActiveNodes(state.modal);
     const activeNodes = activeRouteNodes.concat(acitveModalNodes);
     const isActiveNode = !!activeNodes.find((el) => el.routePath === routeName);

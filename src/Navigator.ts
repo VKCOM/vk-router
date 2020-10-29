@@ -121,26 +121,20 @@ export class Navigator {
       this.history.push(state);
       this.updateUrl(state);
     });
-
-    console.log('HISTORY', this.history)
   };
 
   private onPopState = (event: PopStateEvent) => {
     const pointer = event.state?.counter; 
     const nextState = this.history[pointer];
     const [rootState] = this.history;
-    
-    console.log('ONPOPSTATE', this.history, pointer);
 
-    //if (pointer !== undefined) {
-      
-      this.updateUrl(nextState);
+    if (pointer !== undefined) { 
+      //this.updateUrl(nextState);
       this.replaceState(nextState);
-    // } else {
-    //   this.replaceState(rootState);
-    //   this.updateUrl(rootState, { replace: true });
-    // }
-    
+    } else {
+      this.replaceState(rootState);
+      this.updateUrl(rootState, { replace: true });
+    }
   };
 
   private broadCastState = () => {
@@ -372,8 +366,6 @@ export class Navigator {
 
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
-    
-    console.log('isBack', isBack, 'prevHistoryState, newState');
 
     if (isBack) {
       this.history.pop();
@@ -408,7 +400,6 @@ export class Navigator {
       counter: this.history.length - 1,
     };
 
-   
     if (options.fakeEntry) {
       const currentUrl = browser.getLocation(this.config);
       browser.pushState(stateToHistory, title, currentUrl);
@@ -431,7 +422,6 @@ export class Navigator {
     if (options.replace) {
       browser.replaceState(stateToHistory, title, url);
     } else {
-      console.log('currentCOUNTER', this.history.length - 1);
       browser.pushState(stateToHistory, title, url);
     }
   };
@@ -554,8 +544,10 @@ export class Navigator {
     } else if (routeParams) {
       return areSameStates || (isActiveNode && hasParamsInState);
     }
-
-    return isActiveNode;
+    if(routeName === "messages") {
+      console.log('--->', isActiveNode, activeNodes);
+    }
+    return isActiveNode || hasParamsInState;
   };
 
   public canActivate = (

@@ -217,7 +217,7 @@ export class Navigator {
 
   private buildState = (url: string) => {
     const path = urlToPath(url, this.config);
-    const { page, modal = null, ...params } = getQueryParams(path);
+    const { p: page, m: modal = null, ...params } = getQueryParams(path);
     const RouteNode = this.tree.getRouteNode(page);
 
     let State: NavigatorState = this.defaultState;
@@ -282,8 +282,8 @@ export class Navigator {
     const { newState: state } = this.makeState(routeName, params);
     const { page, modal, params: stateParams } = state;
     const stateToUrl = {
-      page,
-      modal,
+      p: page,
+      m: modal,
       ...stateParams,
     };
     const buildedSearch = buildQueryParams(stateToUrl);
@@ -379,6 +379,7 @@ export class Navigator {
     }
 
     if (fromGo) {
+      console.log('tree', this.tree);
       console.log('----->', routeName, routeParams, newState, routePath, routeData);
     }
     return { newState, routeData };
@@ -435,11 +436,12 @@ export class Navigator {
     }
 
     const stateToUrl: Record<string, any> = {
-      page: state.page,
+      p: state.page,
       ...state.params,
     };
+    
     if (state.modal) {
-      stateToUrl.modal = state.modal;
+      stateToUrl.m = state.modal;
     }
 
     const buildedSearch = buildQueryParams(stateToUrl);

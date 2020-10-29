@@ -178,9 +178,11 @@ const getParentNode = (routes: RouteNode[], path: string) => {
 
 const getRequiredParamsFromPath = (path: string) => {
   const params: string[] = [];
-  const requiredParam = path.split(":")[1];
-  if (requiredParam) {
-    params.push(requiredParam);
+  if (path) {
+    const requiredParam = path.split(":")[1];
+    if (requiredParam) {
+      params.push(requiredParam);
+    }
   }
   return params;
 };

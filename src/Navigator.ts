@@ -4,7 +4,6 @@ import {
   getQueryParams,
   urlToPath,
   deepEqual,
-  isChildRoute,
 } from "./utils";
 import {
   NavigatorRoute,
@@ -113,9 +112,12 @@ export class Navigator {
       const entriesOfNode: NavigatorState[] = [];
       paramsToState[node.routePath] = params[node.routePath];
       // show case param as entry
-      // TODO create entries with required params and not-required params
       
+      // TODO create entries with required params and not-required params
+      // const hasParams = node.routeNode?.data?.params.length;
+
       if (paramsToState[node.routePath]?.show) {
+        
         const { show, ...cleanedParams} = params[node.routePath];
         paramsToState[node.routePath] = cleanedParams;
 
@@ -332,12 +334,13 @@ export class Navigator {
 
   private makeState = (
     routeName: string,
-    routeParams: NavigatorParams = {}
+    routeParams: NavigatorParams = {},
+    fromGo?: boolean
   ) => {
     const prevState = this.getState();
     const { routePath, routeNode } = this.tree.getRouteNode(routeName) || {};
     const { data: routeData } = routeNode || { data: null };
-
+    
     const subRouteKey = this.config.subRouteKey;
 
     let params: NavigatorParams = {
@@ -374,6 +377,10 @@ export class Navigator {
         modal: routePath,
       };
     }
+
+    if (fromGo) {
+      console.log('----->', routeName, routeParams, newState, routePath, routeData);
+    }
     return { newState, routeData };
   };
 
@@ -383,8 +390,8 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
-    const { newState, routeData } = this.makeState(routeName, routeParams);
-
+    const { newState, routeData } = this.makeState(routeName, routeParams, true);
+    
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
 

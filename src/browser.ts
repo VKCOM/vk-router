@@ -1,5 +1,5 @@
 import { Browser } from "./types";
-import { get } from './utils';
+// import { get } from './utils';
 const value = (arg: any) => () => arg;
 const noop = () => {};
 

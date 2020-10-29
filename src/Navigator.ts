@@ -124,7 +124,7 @@ export class Navigator {
   };
 
   private onPopState = (event: PopStateEvent) => {
-    const pointer = (this.state.history.length - 1) <= event.state?.counter ? event.state?.counter : 0; 
+    const pointer = event.state?.counter; 
     const nextState = this.history[pointer];
     const [rootState] = this.history;
     

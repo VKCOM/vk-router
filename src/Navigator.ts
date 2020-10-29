@@ -110,7 +110,25 @@ export class Navigator {
     //if (!isChildRoute(page)) return;
 
     activeNodes.forEach((node) => {
+      const entriesOfNode: NavigatorState[] = [];
       paramsToState[node.routePath] = params[node.routePath];
+      // show case param as entry
+      // TODO create entries with required params and not-required params
+      
+      if (paramsToState[node.routePath]?.show) {
+        const { show, ...cleanedParams} = params[node.routePath];
+        paramsToState[node.routePath] = cleanedParams;
+
+        const prevShowState: NavigatorState = {
+          page: node.routePath,
+          modal: null,
+          params: {
+            ...paramsToState,
+          },
+        };
+        entriesOfNode.push(prevShowState);
+      }
+
       const state: NavigatorState = {
         page: node.routePath,
         modal: null,
@@ -118,16 +136,19 @@ export class Navigator {
           ...paramsToState,
         },
       };
-      this.history.push(state);
-      this.updateUrl(state);
+      entriesOfNode.push(state);
+      this.history.push(...entriesOfNode);
+      entriesOfNode.forEach((subState => this.updateUrl(subState)));
     });
+
+    console.log('HISTORY', this.history);
   };
 
   private onPopState = (event: PopStateEvent) => {
     const pointer = event.state?.counter; 
     const nextState = this.history[pointer];
     const [rootState] = this.history;
-
+ 
     if (pointer !== undefined) { 
       //this.updateUrl(nextState);
       this.replaceState(nextState);
@@ -541,13 +562,11 @@ export class Navigator {
     const areSameStates = deepEqual(state, compareState);
     if (strictCompare) {
       return areSameStates;
-    } else if (routeParams) {
+    } else if (routeParams && Object.keys(routeParams).length) {
       return areSameStates || (isActiveNode && hasParamsInState);
     }
-    if(routeName === "messages") {
-      console.log('--->', isActiveNode, activeNodes);
-    }
-    return isActiveNode || hasParamsInState;
+   
+    return isActiveNode;
   };
 
   public canActivate = (

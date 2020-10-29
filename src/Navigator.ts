@@ -101,10 +101,10 @@ export class Navigator {
     const { page, params } = this.getState();
     const activeNodes = this.getActiveNodes(page);
     //activeRouteNodes.concat(activeModalNodes);
-    
-    if (activeNodes.length > 2) {
-      activeNodes.pop(); // remove started state
-    }
+ 
+    // if (activeNodes.length > 2) {
+    //   activeNodes.pop(); // remove started state
+    // }
     
     const paramsToState: Record<string, any> = {};
     //if (!isChildRoute(page)) return;
@@ -121,6 +121,8 @@ export class Navigator {
       this.history.push(state);
       this.updateUrl(state);
     });
+
+    console.log('HISTORY', this.history)
   };
 
   private onPopState = (event: PopStateEvent) => {
@@ -128,14 +130,16 @@ export class Navigator {
     const nextState = this.history[pointer];
     const [rootState] = this.history;
     
-    if (pointer !== undefined) {
+    console.log('ONPOPSTATE', this.history, pointer);
+
+    //if (pointer !== undefined) {
       
-      this.updateUrl(nextState, { replace: !pointer });
+      this.updateUrl(nextState);
       this.replaceState(nextState);
-    } else {
-      this.replaceState(rootState);
-      this.updateUrl(rootState, { replace: true });
-    }
+    // } else {
+    //   this.replaceState(rootState);
+    //   this.updateUrl(rootState, { replace: true });
+    // }
     
   };
 
@@ -369,8 +373,7 @@ export class Navigator {
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
     
-    // console.log('goTo STATE', routeName, routeParams, newState, routeData);
-
+    console.log('isBack', isBack, 'prevHistoryState, newState');
 
     if (isBack) {
       this.history.pop();
@@ -404,6 +407,8 @@ export class Navigator {
       ...state.params,
       counter: this.history.length - 1,
     };
+
+   
     if (options.fakeEntry) {
       const currentUrl = browser.getLocation(this.config);
       browser.pushState(stateToHistory, title, currentUrl);
@@ -426,6 +431,7 @@ export class Navigator {
     if (options.replace) {
       browser.replaceState(stateToHistory, title, url);
     } else {
+      console.log('currentCOUNTER', this.history.length - 1);
       browser.pushState(stateToHistory, title, url);
     }
   };

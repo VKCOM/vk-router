@@ -32,9 +32,13 @@ const which = (e: any) => {
   e = e || window.event;
   return null === e.which ? e.button : e.which;
 }
+const isExternal = (url: string) => {
+  const domain = (url: string) => url.replace('http://','').replace('https://','').split('/')[0];
+
+  return domain(window.location.href) !== domain(url);
+}
 
 const onLinkListener = (navigator: any, opts: any) => (e: any) => {
-  // console.log('listener', e);
   if (1 !== which(e)) return;
   
   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
@@ -45,10 +49,10 @@ const onLinkListener = (navigator: any, opts: any) => (e: any) => {
   while (el && "A" !== el.nodeName && 'BUTTON' !== el.nodeName) el = el.parentNode;
   if (!el || "A" !== el.nodeName) return;
   
-  if (el.hasAttribute("download") || el.getAttribute("rel") === "external")
+  if (el.hasAttribute("download") || el.getAttribute("rel") === "external" || isExternal(el.href))
     return;
 
-  // check target
+
   if (el.target) return;
   if (!el.href) return;
 

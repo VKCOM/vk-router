@@ -27,6 +27,7 @@ import {
 import browser from "./browser";
 import TreeRoutes from "./tree/Tree";
 import { NavigatorDone } from ".";
+import RouteNode from "./tree/RouteNode";
 
 const defaultConfig: NavigatorConfig = {
   defaultRoute: "default",
@@ -69,8 +70,6 @@ export class Navigator {
 
     this.initialize();
     this.buildHistory();
-
-    // console.log("tree", this.tree, this.history);
   }
 
   private initialize = () => {
@@ -89,36 +88,25 @@ export class Navigator {
     });
   };
 
-  private adapter = (state: NavigatorState) => {
-    return state;
-  };
+  private adapter = (state: NavigatorState) => state;
 
   // build entries to history object and gather params from url
   private buildHistory = () => {
     const { page, params } = this.getState();
-    const activeNodes = this.getActiveNodes(page);
-    //activeRouteNodes.concat(activeModalNodes);
-    //activeNodes.pop(); // remove started state
-    //if (!isChildRoute(page)) return;
+    const stack = [...this.getActiveNodes(page)];
 
-    activeNodes.forEach((node) => {
-      const entriesOfNode: NavigatorState[] = [];
-      const activeParamsPerStep = this.getActiveParams([node], params);
+    while (stack.length) {
+      const node = stack.shift();
 
       const state: NavigatorState = {
         page: node.routePath,
         modal: null,
-        params: {
-          ...activeParamsPerStep,
-        },
+        params: this.getActiveParams([node], params),
       };
-      entriesOfNode.push(state);
-      this.history.push(...entriesOfNode);
-      entriesOfNode.forEach((subState) => this.updateUrl(subState));
-    });
-     
-    
-    console.log("HISTORY-->", this.history, activeNodes, params);
+
+      this.history.push(state);
+      this.updateUrl(state);
+    }
   };
 
   private onPopState = (event: PopStateEvent) => {
@@ -127,7 +115,6 @@ export class Navigator {
     const [rootState] = this.history;
 
     if (pointer !== undefined) {
-      //this.updateUrl(nextState);
       this.replaceState(nextState);
     } else {
       this.replaceState(rootState);
@@ -139,9 +126,11 @@ export class Navigator {
     const toState = this.config.useAdapter
       ? this.adapter(this.getState())
       : this.getState();
+
     const fromState = this.config.useAdapter
       ? this.adapter(this.getPrevState())
       : this.getPrevState();
+
     this.subscribers.forEach((subscriber: NavigatorSubscriber) =>
       subscriber({
         toState,
@@ -290,35 +279,51 @@ export class Navigator {
       segments.forEach((segment: string, idx: number) => {
         path += idx ? `.${segment}` : segment;
 
-        const node = this.tree.getRouteNode(path) || {};
-        if (node) {
-          activeNodes.push(node);
+        const routeNode = this.tree.getRouteNode(path);
+        if (routeNode) {
+          activeNodes.push(routeNode);
         }
       });
     } else if (routeName) {
-      const node = this.tree.getRouteNode(routeName);
-      if (node) {
-        activeNodes.push(node);
+      const routeNode = this.tree.getRouteNode(routeName);
+      if (routeNode) {
+        activeNodes.push(routeNode);
       }
     }
 
     return activeNodes;
   };
 
+  private getRequiredParams = (node: RouteNode) => {
+    let params: string[] = [];
+    const stack = [node];
+
+    while (stack.length) {
+      const node = stack.shift();
+      if (node?.params) {
+        params = params.concat(node?.params);
+        if (node.parent) {
+          stack.push(node.parent);
+        }
+      }
+    }
+
+    return params;
+  };
+
   private getActiveParams = (
-    activeNodes: any[],
+    activeNodes: RouteNode[],
     paramsPool: Record<string, any>
   ) => {
     const activeParams: Record<string, any> = {};
-
-    activeNodes.forEach((node) => {
-      const requiredParams = node.routeNode?.params || [];
-      for (const [key, value] of Object.entries(paramsPool)) {
-        if (requiredParams.includes(key)) {
-          activeParams[key] = value;
-        }
+    const stack = [...activeNodes];
+    while (stack.length) {
+      const node = stack.shift();
+      const keys: string[] = this.getRequiredParams(node);
+      for (const key of keys) {
+        activeParams[key] = paramsPool[key];
       }
-    });
+    }
 
     return activeParams;
   };
@@ -330,7 +335,7 @@ export class Navigator {
   ) => {
     const prevState = this.getState();
 
-    const { routePath, routeNode } = this.tree.getRouteNode(routeName) || {};
+    const routeNode: RouteNode = this.tree.getRouteNode(routeName);
     const { data: routeData } = routeNode || { data: null };
 
     const subRouteKey = this.config.subRouteKey;
@@ -363,7 +368,7 @@ export class Navigator {
           ...prevState.params,
           ...routeParams,
         },
-        modal: routePath,
+        modal: routeNode.routePath,
       };
     }
 
@@ -387,6 +392,12 @@ export class Navigator {
 
     const prevHistoryState = this.history[this.history.length - 2];
     const isBack = deepEqual(prevHistoryState, newState);
+
+    if (options.firstLoad) {
+      const beforeHistoryState = this.history[this.history.length - 1];
+      const sameState = deepEqual(beforeHistoryState, newState);
+      if (sameState) return;
+    }
 
     if (isBack) {
       this.history.pop();

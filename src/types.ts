@@ -52,6 +52,7 @@ export interface NavigatorRoute {
   subRoute?: boolean;
   updateUrl?: boolean;
   title?: string;
+  routePath?: string;
   children?: NavigatorRoute[];
 }
 

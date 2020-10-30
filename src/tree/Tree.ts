@@ -154,7 +154,7 @@ export default class TreeRoutes {
     return revertedObjectPath.split(".").reverse().join(".").replace(/\.$/, "");
   };
 
-  public getRouteNode = (routeName: string = "") => {
+  public getRouteNode = (routeName: string = ""): RouteNode => {
     const pathToRoute = isPath(routeName) ? routeName : "";
 
     const routeNode: RouteNode = pathToRoute
@@ -166,8 +166,9 @@ export default class TreeRoutes {
     }
 
     const routePath = this.printRoute(routeNode);
-      
-    return { routePath, routeNode };
+    routeNode.routePath = routePath;
+    
+    return routeNode;
   };
 }
 
@@ -177,22 +178,12 @@ const getParentNode = (routes: RouteNode[], path: string) => {
   return parent;
 };
 
-const getRequiredParamsFromPath = (path: string) => {
-  const params: string[] = [];
-  if (path) {
-    const requiredParam = path.split(":")[1];
-    if (requiredParam) {
-      params.push(requiredParam);
-    }
-  }
-  return params;
-};
-
 const makePreTreeRoute = (route: NavigatorRoute) => {
   const { path, name, ...routeProps } = route;
   const preTreeRoute: NavigatorRoute = {
     ...routeProps,
     name: cutName(name),
+    routePath: name
   };
 
   return preTreeRoute;

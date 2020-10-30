@@ -300,8 +300,8 @@ export class Navigator {
     const { newState: state } = this.makeState(routeName, params);
     const { page, modal, params: stateParams } = state;
     const stateToUrl = {
-      page,
-      modal,
+      p: page,
+      m: modal,
       ...stateParams,
     };
     const buildedSearch = buildQueryParams(stateToUrl);

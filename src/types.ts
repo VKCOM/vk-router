@@ -102,7 +102,7 @@ export interface Browser {
   pushState(state: HistoryState, title: string | null, path: string): void;
   replaceState(state: HistoryState, title: string | null, path: string): void;
   addPopstateListener(fn: any, opts: any): any;
-  addLinkInterceptorListener(fn: any, opts: any): any;
+  addLinkInterceptorListener(fn: any, opts?: any): any;
   getLocation(opts: NavigatorConfig): string;
   getState(): HistoryState;
   getHash(): string;

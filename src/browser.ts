@@ -38,13 +38,14 @@ const isExternal = (url: string) => {
   return domain(window.location.href) !== domain(url);
 }
 
-const onLinkListener = (navigator: any, opts: any) => (e: any) => {
+//TODO user opts
+const onLinkListener = function () {
+  return (e: any) => {
   if (1 !== which(e)) return;
   
   if (e.metaKey || e.ctrlKey || e.shiftKey) return;
   if (e.defaultPrevented) return;
 
-  // ensure link
   let el = e.target;
   while (el && "A" !== el.nodeName && 'BUTTON' !== el.nodeName) el = el.parentNode;
   if (!el || "A" !== el.nodeName) return;
@@ -52,23 +53,23 @@ const onLinkListener = (navigator: any, opts: any) => (e: any) => {
   if (el.hasAttribute("download") || el.getAttribute("rel") === "external" || isExternal(el.href))
     return;
 
-
   if (el.target) return;
   if (!el.href) return;
 
-  const toRouteState = navigator.buildState(el.href);
-  
+  const toRouteState = this.buildState(el.href);
+
   if (toRouteState) {
     e.preventDefault();
     const routeName = toRouteState.modal || toRouteState.page;
-    const params = toRouteState.params[routeName] || {};
-    navigator.go(routeName, params);
+    const params = toRouteState.params || {};
+    this.go(routeName, params);
   }
+ }
 };
 
-const addLinkInterceptorListener = (navigator: Navigator, opts?: any) => {
+const addLinkInterceptorListener = function () {
   const clickEvent = document.ontouchstart ? "touchstart" : "click";
-  const clickHandler = onLinkListener(navigator, opts);
+  const clickHandler = onLinkListener.call(this);
   document.addEventListener(clickEvent, clickHandler, false);
 
   return () => {

@@ -79,9 +79,7 @@ export class Navigator {
     this.defaultState = {
       page: routeName,
       modal: null,
-      params: {
-        [routeName]: {},
-      },
+      params: {},
     };
 
     const initState = this.buildState(browser.getLocation(this.config));
@@ -105,27 +103,24 @@ export class Navigator {
     //   activeNodes.pop(); // remove started state
     // }
     
-    const paramsToState: Record<string, any> = {};
+    const paramsToState: Record<string, any> = this.getActiveParams(activeNodes, params);
     //if (!isChildRoute(page)) return;
 
     activeNodes.forEach((node) => {
-      const entriesOfNode: NavigatorState[] = [];
-      paramsToState[node.routePath] = params[node.routePath];
-      // show case param as entry
+      const entriesOfNode: NavigatorState[] = []; 
+   
       
       // TODO create entries with required params and not-required params
       // const hasParams = node.routeNode?.data?.params.length;
-
-      if (paramsToState[node.routePath]?.show) {
-        
-        const { show, ...cleanedParams} = params[node.routePath];
-        paramsToState[node.routePath] = cleanedParams;
+      // show case param as entry
+      if (paramsToState?.show) {
+        const { show, ...cleanedParams} = paramsToState;
 
         const prevShowState: NavigatorState = {
           page: node.routePath,
           modal: null,
           params: {
-            ...paramsToState,
+            ...cleanedParams,
           },
         };
         entriesOfNode.push(prevShowState);
@@ -142,8 +137,6 @@ export class Navigator {
       this.history.push(...entriesOfNode);
       entriesOfNode.forEach((subState => this.updateUrl(subState)));
     });
-
-    console.log('HISTORY', this.history);
   };
 
   private onPopState = (event: PopStateEvent) => {
@@ -288,9 +281,7 @@ export class Navigator {
     };
     const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
-    const url = `${this.config.base}${search}`;
-    // console.log(url);
-    return url;
+    return `${this.config.base}${search}`;
   };
 
   public buildPath = (
@@ -332,37 +323,47 @@ export class Navigator {
     return activeNodes;
   };
 
+  private getActiveParams = (activeNodes: any[], paramsPool: Record<string, any>) => {
+    const activeParams = {};
+
+    activeNodes.forEach((node) => { 
+      const requiredParams = node.routeNode?.data?.params || [];
+      for (const [key, value] of Object.entries(paramsPool)) {
+        if(requiredParams.includes(key)) {
+          requiredParams[key] = value;
+        };
+      } 
+    });
+
+    return activeParams;
+  }
+
   private makeState = (
     routeName: string,
     routeParams: NavigatorParams = {},
     fromGo?: boolean
   ) => {
     const prevState = this.getState();
+    
     const { routePath, routeNode } = this.tree.getRouteNode(routeName) || {};
     const { data: routeData } = routeNode || { data: null };
     
     const subRouteKey = this.config.subRouteKey;
 
-    let params: NavigatorParams = {
-      [routeName]: routeParams || {},
-    };
+    let params: NavigatorParams = { ...routeParams };
 
     if (routeNode?.parent?.name) {
-      const activeParams: Record<string, any> = {};
       const activeNodes = this.getActiveNodes(routeName);
-
-      activeNodes.forEach((node) => {
-        activeParams[node.routePath] = prevState.params[node.routePath] || {};
-      });
-
+      const activeParams: Record<string, any> = this.getActiveParams(activeNodes, prevState.params);
+     
       params = {
         ...activeParams,
-        [routeName]: routeParams || {},
+        ...routeParams,
       };
     }
 
     let newState: NavigatorState = {
-      page: routePath,
+      page: routeName,
       modal: null,
       params,
     };
@@ -372,16 +373,15 @@ export class Navigator {
         page: prevState.page,
         params: {
           ...prevState.params,
-          [routeName]: routeParams || { [routeName]: {} },
+          ...routeParams,
         },
         modal: routePath,
       };
     }
 
-    if (fromGo) {
-      console.log('tree', this.tree);
-      console.log('----->', routeName, routeParams, newState, routePath, routeData);
-    }
+    // if (fromGo) {
+    //   console.log('----->', routeName, routeParams, newState, routePath, routeData);
+    // }
     return { newState, routeData };
   };
 
@@ -480,20 +480,17 @@ export class Navigator {
       this.config
     );
 
-    this.removeLinkPressListener = browser.addLinkInterceptorListener(
-      this,
-      this.config
-    );
+    this.removeLinkPressListener = browser.addLinkInterceptorListener.call(this);
 
     const initState = this.getState();
 
     if (initState && initState.page) {
       const routeName = initState.modal || initState.page;
-      const params = initState.params[routeName];
+      const params = initState.params;
 
       this.go(routeName, params, { firstLoad: true });
     } else if (startRoute) {
-      this.go(startRoute, params[startRoute], options);
+      this.go(startRoute, params, options);
     } else {
       const { defaultRoute } = this.config;
       if (defaultRoute) {
@@ -521,7 +518,7 @@ export class Navigator {
   };
 
   public getState: NavigatorGetState = (options = {}) => {
-    const { withoutHistory = false, routeParams = false } = options;
+    const { withoutHistory = false } = options;
 
     let State = { ...this.state };
 
@@ -531,16 +528,7 @@ export class Navigator {
         ...state,
       };
     }
-
-    if (routeParams) {
-      State = {
-        ...State,
-        params: {
-          ...(State.params[State.page] || {}),
-          ...(State.params[State.modal] || {}),
-        },
-      };
-    }
+ 
     return State;
   };
 
@@ -563,7 +551,7 @@ export class Navigator {
     const acitveModalNodes = this.getActiveNodes(state.modal);
     const activeNodes = activeRouteNodes.concat(acitveModalNodes);
     const isActiveNode = !!activeNodes.find((el) => el.routePath === routeName);
-    const hasParamsInState = deepEqual(state.params[routeName], routeParams);
+    const hasParamsInState = deepEqual(state.params, routeParams);
 
     const { newState: compareState } =
       this.makeState(routeName, routeParams) || {};

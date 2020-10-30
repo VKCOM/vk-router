@@ -166,6 +166,7 @@ export default class TreeRoutes {
     }
 
     const routePath = this.printRoute(routeNode);
+      
     return { routePath, routeNode };
   };
 }

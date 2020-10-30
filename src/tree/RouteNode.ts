@@ -11,8 +11,11 @@ export default class RouteNode {
        const { name, path, params, encodeParams, decodeParams, ...rest} = data;
        this.name = name;
        this.path = path; 
+       this.params = params || [];
        this.parent = null;
        this.data = rest;
        this.children = [];
+       this.encodeParams = encodeParams; 
+       this.decodeParams = decodeParams;
     }
 };

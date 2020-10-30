@@ -193,7 +193,6 @@ const makePreTreeRoute = (route: NavigatorRoute) => {
   const preTreeRoute: NavigatorRoute = {
     ...routeProps,
     name: cutName(name),
-    params: getRequiredParamsFromPath(path),
   };
 
   return preTreeRoute;

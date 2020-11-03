@@ -8,9 +8,9 @@ export default class RouteNode {
     decodeParams?: () => {};
 
     constructor(data: RouteNode) {
-       const { name, path, params, encodeParams, decodeParams, ...rest} = data;
-       this.name = name;
-       this.path = path; 
+       const { name, routePath, params, encodeParams, decodeParams, ...rest} = data;
+       this.name = name; 
+       this.routePath = routePath;
        this.params = params || [];
        this.parent = null;
        this.data = rest;

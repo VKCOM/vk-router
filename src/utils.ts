@@ -6,17 +6,17 @@ export const isObject = (obj: any) =>
 
 export const get = (obj: any, path: string, def: any = undefined) => {
   const everyFunc = (step: string) => {
-		return !(step && (obj = obj[step]) === undefined);
-  }
-  
-  const fullPath = path
-		.replace(/\[/g, '.')
-		.replace(/]/g, '')
-		.split('.')
-		.filter(Boolean);
+    return !(step && (obj = obj[step]) === undefined);
+  };
 
-	return fullPath.every(everyFunc) ? obj : def;
-}
+  const fullPath = path
+    .replace(/\[/g, ".")
+    .replace(/]/g, "")
+    .split(".")
+    .filter(Boolean);
+
+  return fullPath.every(everyFunc) ? obj : def;
+};
 
 export const set = (obj: Record<string, any>, path: string, value: any) => {
   const pList = Array.isArray(path) ? path : path ? path.split(".") : [];
@@ -45,10 +45,10 @@ export const getQueryParams = (path: string) => {
   for (const piece of queryStringPieces) {
     let [key, value] = piece.split("=");
     value = value || "";
-    if(key.includes('.')) {
-      const segments = key.split('.');
+    if (key.includes(".")) {
+      const segments = key.split(".");
       const paramName = segments.pop();
-      const nodeKey = segments.join('.');
+      const nodeKey = segments.join(".");
       decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
       decodedQueryString[nodeKey][paramName] = value;
     }
@@ -69,10 +69,10 @@ export const getUrlParams = (url: string) => {
   for (const piece of queryStringPieces) {
     let [key, value] = piece.split("=");
     value = value || "";
-    if(key.includes('.')) {
-      const segments = key.split('.');
+    if (key.includes(".")) {
+      const segments = key.split(".");
       const paramName = segments.pop();
-      const nodeKey = segments.join('.');
+      const nodeKey = segments.join(".");
       decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
       decodedQueryString[nodeKey][paramName] = value;
     }
@@ -132,7 +132,7 @@ export const urlToPath = (url: string, options: any) => {
 
   const pathParts = path.match(/^(.+?)(#.+?)?(\?.+)?$/);
 
-  if (!pathParts) return '';
+  if (!pathParts) return "";
 
   const pathname = pathParts[1];
   const hash = pathParts[2] || "";
@@ -147,7 +147,36 @@ export const urlToPath = (url: string, options: any) => {
   );
 };
 
-export const deepEqual = (object1: any, object2: any, strictValueCompare:boolean = false) => {
+export const hasProperties = (
+  object1: any,
+  object2: any,
+  strictValueCompare: boolean = false
+) => {
+  if (!object1 || !object2) {
+    return false;
+  }
+  const keys2 = Object.keys(object2);
+
+  for (const key of keys2) {
+    const val1 = object1[key];
+    const val2 = object2[key];
+    const areObjects = isObject(val1) && isObject(val2);
+    if (
+      (areObjects && !hasProperties(val1, val2)) ||
+      (!areObjects && (strictValueCompare ? val1 !== val2 : val1 != val2))
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+export const deepEqual = (
+  object1: any,
+  object2: any,
+  strictValueCompare: boolean = false
+) => {
   if (!object1 || !object2) {
     return false;
   }
@@ -173,4 +202,4 @@ export const deepEqual = (object1: any, object2: any, strictValueCompare:boolean
   return true;
 };
 
-export const isChildRoute = (route: string) => route.includes('.');
+export const isChildRoute = (route: string) => route.includes(".");

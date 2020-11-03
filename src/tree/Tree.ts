@@ -26,7 +26,7 @@ export default class TreeRoutes {
     }
     const rootData: RouteNode = {
       name: "",
-      path: "",
+      routePath: "",
       params: "",
       children: [],
     };
@@ -137,23 +137,7 @@ export default class TreeRoutes {
   public findIndex = (routes: RouteNode[], routeName: string) => {
     return routes.findIndex((route: RouteNode) => route.name === routeName);
   };
-
-  public printRoute = (route: RouteNode) => {
-    let revertedObjectPath = "";
-
-    const fnPrint = (node: RouteNode) => {
-      if (node instanceof RouteNode && node.name) {
-        revertedObjectPath += `.${node.name}`;
-        if (node.parent) {
-          fnPrint(node.parent);
-        }
-      }
-    };
-    fnPrint(route);
-
-    return revertedObjectPath.split(".").reverse().join(".").replace(/\.$/, "");
-  };
-
+  
   public getRouteNode = (routeName: string = ""): RouteNode => {
     const pathToRoute = isPath(routeName) ? routeName : "";
 
@@ -165,9 +149,6 @@ export default class TreeRoutes {
       this.errorLogger(ERROR_ROUTE_NOT_REGISTERED, pathToRoute);
     }
 
-    const routePath = this.printRoute(routeNode);
-    routeNode.routePath = routePath;
-    
     return routeNode;
   };
 }
@@ -198,20 +179,25 @@ const createPreTree = (routes: NavigatorRoute[]) => {
   ) => { 
     if (Array.isArray(route)) {
       route.forEach((el) => iterateRoute(el));
+    
     } else if (route) {
-     
       const preTreeRoute = makePreTreeRoute(route);
+      
       if (parent) {
         parent.children.push(preTreeRoute);
+      
       } else if (isPath(route.name)) {
         const parent = getParentNode(preTree, route.name);
+        
         if (parent) {
           parent.children = parent.children || [];
           parent.children.push(preTreeRoute);
         }
+      
       } else {
         preTree.push(preTreeRoute);
       }
+      
       if (Array.isArray(route.children)) {
         route.children.forEach((el: RouteNode) => iterateRoute(el, route));
       }
@@ -226,9 +212,7 @@ export function createRoutesTree(
   routes: RouteNode[],
   config: TreeRoutesConfig = {}
 ) {
-  const proceedRoutes: NavigatorRoute[] = config.useAdapter
-    ? createPreTree(routes)
-    : routes;
+  const proceedRoutes: NavigatorRoute[] = createPreTree(routes);
 
   const RoutesTree = new TreeRoutes(config);
 

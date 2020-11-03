@@ -16,7 +16,10 @@ const pushState = (state: any, title: string, path: string) =>
 const replaceState = (state: any, title: any, path: any) =>
   window.history.replaceState(state, title, path);
 
-export const merge = (object: Record<string, any>, other: Record<string, any>) => {
+export const merge = (
+  object: Record<string, any>,
+  other: Record<string, any>
+) => {
   const merged: Record<string, any> = {};
   Object.keys(object || []).forEach((key: string) => {
     merged[key] = object[key];
@@ -31,40 +34,46 @@ export const merge = (object: Record<string, any>, other: Record<string, any>) =
 const which = (e: any) => {
   e = e || window.event;
   return null === e.which ? e.button : e.which;
-}
+};
 const isExternal = (url: string) => {
-  const domain = (url: string) => url.replace('http://','').replace('https://','').split('/')[0];
+  const domain = (url: string) =>
+    url.replace("http://", "").replace("https://", "").split("/")[0];
 
   return domain(window.location.href) !== domain(url);
-}
+};
 
 //TODO user opts
 const onLinkListener = function () {
   return (e: any) => {
-  if (1 !== which(e)) return;
-  
-  if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-  if (e.defaultPrevented) return;
+    if (1 !== which(e)) return;
 
-  let el = e.target;
-  while (el && "A" !== el.nodeName && 'BUTTON' !== el.nodeName) el = el.parentNode;
-  if (!el || "A" !== el.nodeName) return;
-  
-  if (el.hasAttribute("download") || el.getAttribute("rel") === "external" || isExternal(el.href))
-    return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (e.defaultPrevented) return;
 
-  if (el.target) return;
-  if (!el.href) return;
+    let el = e.target;
+    while (el && "A" !== el.nodeName && "BUTTON" !== el.nodeName)
+      el = el.parentNode;
+    if (!el || "A" !== el.nodeName) return;
 
-  const toRouteState = this.buildState(el.href);
+    if (
+      el.hasAttribute("download") ||
+      el.getAttribute("rel") === "external" ||
+      isExternal(el.href)
+    )
+      return;
 
-  if (toRouteState) {
-    e.preventDefault();
-    const routeName = toRouteState.modal || toRouteState.page;
-    const params = toRouteState.params || {};
-    this.go(routeName, params);
-  }
- }
+    if (el.target) return;
+    if (!el.href) return;
+
+    const toRouteState = this.buildState(el.href);
+
+    if (toRouteState) {
+      e.preventDefault();
+      const routeName = toRouteState.modal || toRouteState.page;
+      const params = toRouteState.params || {};
+      this.go(routeName, params);
+    }
+  };
 };
 
 const addLinkInterceptorListener = function () {

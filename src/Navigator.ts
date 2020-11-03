@@ -4,6 +4,7 @@ import {
   getQueryParams,
   urlToPath,
   deepEqual,
+  hasProperties,
 } from "./utils";
 import {
   NavigatorRoute,
@@ -69,7 +70,6 @@ export class Navigator {
     });
 
     this.initialize();
-    this.buildHistory();
   }
 
   private initialize = () => {
@@ -94,7 +94,6 @@ export class Navigator {
   private buildHistory = () => {
     const { page, params } = this.getState();
     const stack = [...this.getActiveNodes(page)];
-
     while (stack.length) {
       const node = stack.shift();
 
@@ -107,6 +106,7 @@ export class Navigator {
       this.history.push(state);
       this.updateUrl(state);
     }
+    //console.log('builded history', this.history);
   };
 
   private onPopState = (event: PopStateEvent) => {
@@ -273,25 +273,22 @@ export class Navigator {
 
   private getActiveNodes = (routeName: string) => {
     const activeNodes = [];
-    if (routeName && routeName.includes(".")) {
-      let path = "";
-      const segments = routeName.split(".");
-      segments.forEach((segment: string, idx: number) => {
-        path += idx ? `.${segment}` : segment;
 
-        const routeNode = this.tree.getRouteNode(path);
-        if (routeNode) {
-          activeNodes.push(routeNode);
-        }
-      });
-    } else if (routeName) {
+    if (routeName) {
       const routeNode = this.tree.getRouteNode(routeName);
-      if (routeNode) {
-        activeNodes.push(routeNode);
+      const stack = [routeNode];
+      while (stack.length) {
+        const node = stack.shift();
+        activeNodes.push(node);
+        if (node.parent) {
+          //do not put root node to history
+          if (node.parent.name !== "") {
+            stack.push(node.parent);
+          }
+        }
       }
     }
-
-    return activeNodes;
+    return activeNodes.reverse();
   };
 
   private getRequiredParams = (node: RouteNode) => {
@@ -371,7 +368,6 @@ export class Navigator {
         modal: routeNode.routePath,
       };
     }
-
     // if (fromGo) {
     //   console.log('----->', routeName, routeParams, newState, routePath, routeData);
     // }
@@ -489,6 +485,8 @@ export class Navigator {
 
     const initState = this.getState();
 
+    this.buildHistory();
+
     if (initState && initState.page) {
       const routeName = initState.modal || initState.page;
       const params = initState.params;
@@ -552,17 +550,23 @@ export class Navigator {
     ignoreParams: boolean = false
   ) => {
     const state = this.getState({ withoutHistory: true });
+    const activeStateParams = state.params;
     const activeRouteNodes = this.getActiveNodes(state.page);
     const acitveModalNodes = this.getActiveNodes(state.modal);
     const activeNodes = activeRouteNodes.concat(acitveModalNodes);
-    const isActiveNode = !!activeNodes.find((el) => el.routePath === routeName);
-    const hasParamsInState = deepEqual(state.params, routeParams);
+    const activeNode = activeNodes.find((el) => el.routePath === routeName);
+    const isActiveNode = !!activeNode;
+
+    const hasParamsInState = hasProperties(activeStateParams, routeParams);
 
     const { newState: compareState } =
       this.makeState(routeName, routeParams) || {};
 
     const areSameStates = deepEqual(state, compareState);
 
+    // if (routeName === 'school.messages') {
+    //   console.log('node',  activeNode, activeNodes, activeStateParams, routeParams, hasParamsInState);
+    // }
     if (strictCompare) {
       return areSameStates;
     } else if (routeParams && Object.keys(routeParams).length) {

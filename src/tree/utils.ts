@@ -88,15 +88,25 @@ export const cutName = (path: string) => {
   return segments.splice(-1, 1)[0];
 }
 
-export const getByPath = (routes: NavigatorRoute[] | RouteNode[], pathToRoute: string) => {
+const getPathSegments = (pathToRoute: string) => {
   const segments = pathToRoute.split(".");
+  let routePath = '';
+  const pathSegments = segments.map((segment: string, idx: number) => {
+    routePath += !idx ? segment : `.${segment}`;
+    return routePath;
+  });
+
+  return pathSegments; 
+}
+
+export const getByPath = (routes: NavigatorRoute[] | RouteNode[], pathToRoute: string) => {
+  const segments = getPathSegments(pathToRoute);
   const stack = [...routes];
   let resultNode: RouteNode | null = null;
-
   while (stack.length && segments.length) {
     const route = stack.shift();
     const [segment] = segments;
-    if (route.name === segment) {
+    if (route.routePath === segment) {
       if (segments.length > 1) {
         stack.push(...route.children);
         segments.shift();

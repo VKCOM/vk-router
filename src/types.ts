@@ -1,4 +1,5 @@
 import { Navigator } from "./Navigator";
+import RouteNode from "./tree/RouteNode";
 
 export type NavigatorErrorLogger = (errorStr: string) => void;
 
@@ -74,13 +75,12 @@ export interface NavigatorState {
   modal?: string;
   history?: NavigatorHistoryRecord[];
   params: NavigatorParams;
+  activeNodes?: RouteNode[];
 }
 
 export interface NavigatorStatesToSubscriber {
   toState: NavigatorState;
   fromState: NavigatorState;
-  route?: NavigatorState;
-  previousRoute?: NavigatorState;
 }
 
 export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;

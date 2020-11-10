@@ -1,9 +1,4 @@
 import { Browser } from "./types";
-// import { get } from './utils';
-const value = (arg: any) => () => arg;
-const noop = () => {};
-
-const isBrowser = typeof window !== "undefined" && window.history;
 
 const getBase = () => window.location.pathname;
 
@@ -16,25 +11,11 @@ const pushState = (state: any, title: string, path: string) =>
 const replaceState = (state: any, title: any, path: any) =>
   window.history.replaceState(state, title, path);
 
-export const merge = (
-  object: Record<string, any>,
-  other: Record<string, any>
-) => {
-  const merged: Record<string, any> = {};
-  Object.keys(object || []).forEach((key: string) => {
-    merged[key] = object[key];
-  });
-  Object.keys(other || []).forEach((key: string) => {
-    merged[key] = object[key];
-  });
-
-  return merged;
-};
-
 const which = (e: any) => {
   e = e || window.event;
   return null === e.which ? e.button : e.which;
 };
+
 const isExternal = (url: string) => {
   const domain = (url: string) =>
     url.replace("http://", "").replace("https://", "").split("/")[0];
@@ -42,7 +23,6 @@ const isExternal = (url: string) => {
   return domain(window.location.href) !== domain(url);
 };
 
-//TODO user opts
 const onLinkListener = function () {
   return (e: any) => {
     if (1 !== which(e)) return;
@@ -126,28 +106,15 @@ const getState = () => window.history.state;
 
 const getHash = () => window.location.hash;
 
-let browser = {};
-if (isBrowser) {
-  browser = {
-    getBase,
-    pushState,
-    replaceState,
-    addPopstateListener,
-    addLinkInterceptorListener,
-    getLocation,
-    getState,
-    getHash,
-  };
-} else {
-  browser = {
-    getBase: value(""),
-    pushState: noop,
-    replaceState: noop,
-    addPopstateListener: noop,
-    getLocation: value(""),
-    getState: value(null),
-    getHash: value(""),
-  };
-}
+const browser = {
+  getBase,
+  pushState,
+  replaceState,
+  addPopstateListener,
+  addLinkInterceptorListener,
+  getLocation,
+  getState,
+  getHash,
+};
 
 export default browser as Browser;

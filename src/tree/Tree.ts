@@ -79,7 +79,6 @@ export default class TreeRoutes {
     return resultNode;
   };
 
-  // only first occurence
   private findByName = (nodeName: string) => {
     let resultNode;
     this.contains((node: RouteNode) => {
@@ -205,6 +204,7 @@ const createPreTree = (routes: NavigatorRoute[]) => {
   };
   
   iterateRoute(routes);
+
   return preTree;
 };
 

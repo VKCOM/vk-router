@@ -1,4 +1,4 @@
-/** 
+/**
  * Модуль навигации - обычная машина состояний,
  * возвращает состояние подписчикам
  */
@@ -22,6 +22,7 @@ import {
   NavigatorRouteHandler,
   NavigatorRouteHandlerCollection,
   NavigatorErrorLogger,
+  NavigatorDone,
 } from "./types";
 
 import {
@@ -32,11 +33,10 @@ import {
 
 import browser from "./browser";
 import TreeRoutes from "./tree/Tree";
-import { NavigatorDone } from ".";
 import RouteNode from "./tree/RouteNode";
 
-/** 
- * Объект конфигурации по умолчанию 
+/**
+ * Объект конфигурации по умолчанию
  */
 const defaultConfig: NavigatorConfig = {
   defaultRoute: "default",
@@ -45,7 +45,7 @@ const defaultConfig: NavigatorConfig = {
   routeKey: "route",
 };
 
-/** 
+/**
  * Главный класс, описывающий основные методы жизненного цикла роутера
  */
 export class Navigator {
@@ -77,22 +77,21 @@ export class Navigator {
 
     this.tree = createRoutesTree(this.routes, {
       errorLogger: this.errorLogger,
-      useAdapter: this.config.useAdapter,
     });
 
     this.initialize();
   }
 
-  /** 
+  /**
    * Метод жизненного цикла роутера - инициализирует начальное состояние роутера до старта
    * и задает fallback сосотяние по умолчанию, на которое можно перейти в случае ошибки.
    */
   private initialize = () => {
     const firstRouteName = (this.routes[0] || {}).name;
-    const routeName = this.config.defaultRoute || firstRouteName;
+    const page = this.config.defaultRoute || firstRouteName;
 
     this.defaultState = {
-      page: routeName,
+      page,
       modal: null,
       params: {},
     };
@@ -103,7 +102,7 @@ export class Navigator {
     });
   };
 
-  /** 
+  /**
    * Метод жизненного цикла роутера - выполняет заполнение
    * стека истории роутера на основе начального состояния
    * в дальнейшем перемещение по истории осуществляется только по внутреннему стеку.
@@ -124,13 +123,12 @@ export class Navigator {
       this.history.push(state);
       this.updateUrl(state);
     }
-    //console.log('builded history', this.history);
   };
 
-  /** 
+  /**
    * Метод обработки события popstate, обеспечивает переход по внутреннему стеку истории роутера.
    * При достижении первого вхождения дальнейшие переходы назад в браузере
-   * заменяются на первое вхождение в историю через API history.replaceState
+   * заменяются на первое вхождение в историю через history.replaceState
    */
   private onPopState = (event: PopStateEvent) => {
     const pointer = event.state?.counter;
@@ -145,8 +143,8 @@ export class Navigator {
     }
   };
 
-  /** 
-   * Метод жизненного цикла роутера для передачи состояния в подписчики 
+  /**
+   * Метод жизненного цикла роутера для передачи состояния в подписчики
    */
   private broadCastState = () => {
     const toState = this.getState();
@@ -160,17 +158,19 @@ export class Navigator {
     );
   };
 
-  /** 
-   * Метод для выполнения callback функций переданных в метод go 
+  /**
+   * Метод для выполнения callback функций переданных в метод go
    */
-  private done = (options?: Record<string, any>) => {
-    if (options.redirect) {
-      this.go(options.redirect.name, {}, { replace: true });
+  private done = (opts?: Record<string, any>) => {
+    if (opts.redirect) {
+      this.go(opts.redirect.name, {}, { replace: true });
     }
   };
 
-  /** 
-   * Метод полностью заменяет состояние роутера на указанное в аргументе 
+  /**
+   * Метод полностью заменяет состояние роутера на указанное в аргументе.
+   * Для роута, на который осуществляется переход, и который не является модалкой,
+   * выполняет функцию из коллекции routeHandlerCollection.
    */
   private replaceState = (state: NavigatorState) => {
     const prevState = { ...this.state };
@@ -188,7 +188,7 @@ export class Navigator {
     this.broadCastState();
   };
 
-  /** 
+  /**
    * Метод жизненного цикла роутера - устанавливает переход в новое состояние роутера.
    * Пока выполняется синхронно.
    */
@@ -208,7 +208,7 @@ export class Navigator {
     this.broadCastState();
   };
 
-  /** 
+  /**
    * Метод создания состояния на основе переданного URL в инициализированный роутер,
    * используется для получения начального состояния роутера
    */
@@ -246,8 +246,8 @@ export class Navigator {
     }
   };
 
-  /** 
-   * Метод отписки от обновлений сосотяния роутера 
+  /**
+   * Метод отписки от обновлений сосотяния роутера
    */
   public unsubscribe = (subscriber: NavigatorSubscriber) => {
     if (this.subscribers.includes(subscriber)) {
@@ -255,15 +255,15 @@ export class Navigator {
     }
   };
 
-  /** 
-   * Метод удаления всех подписчиков на роутер 
+  /**
+   * Метод удаления всех подписчиков на роутер
    * */
   public removeAllSubscribers = () => {
     this.subscribers = [];
   };
 
-  /** 
-   * Метод добавления узлов в указанное дерево, по умолчанию  в текущее активное 
+  /**
+   * Метод добавления узлов в указанное дерево, по умолчанию  в текущее активное
    * */
   public add = (routes: NavigatorRoute[] | NavigatorRoute) => {
     if (Array.isArray(routes)) {
@@ -278,15 +278,15 @@ export class Navigator {
     }
   };
 
-  /** 
-   * Метод удаления узлов из указанного дерева, по умолчанию  из текущего активного 
+  /**
+   * Метод удаления узлов из указанного дерева, по умолчанию  из текущего активного
    * */
   public remove = (routeName: string) => {
     this.tree.remove(routeName);
   };
 
-  /** 
-   * Метод создания ссылки на основе имени роута и параметров. 
+  /**
+   * Метод создания ссылки на основе имени роута и параметров.
    * */
   public buildUrl = (
     routeName: string,
@@ -304,8 +304,8 @@ export class Navigator {
     return `${this.config.base}${search}`;
   };
 
-  /** 
-   * Метод создания ссылки на основе имени роута и параметров. 
+  /**
+   * Метод создания ссылки на основе имени роута и параметров.
    * */
   public buildPath = (
     routeName: string,
@@ -323,7 +323,7 @@ export class Navigator {
     return `${this.config.base}${search}`;
   };
 
-  /** 
+  /**
    * Метод получения коллекции активных узлов,
    * в порядке от корня дерева заканчивая текущим активным роутом
    * */
@@ -346,7 +346,7 @@ export class Navigator {
     return activeNodes.reverse();
   };
 
-  /** 
+  /**
    * Метод получения коллекции обязательных параметров для переданного узла,
    * в порядке от корня дерева заканчивая текущим активным роутом
    * */
@@ -367,7 +367,7 @@ export class Navigator {
     return params;
   };
 
-  /** 
+  /**
    * Метод получения коллекции активных параметров для коллекции узлов
    * */
   private getActiveParams = (
@@ -387,7 +387,7 @@ export class Navigator {
     return activeParams;
   };
 
-  /** 
+  /**
    * Утилита роутера, выполняет построение состояния роутера на основе
    * переданного имени маршрута, параметров, а так же построенного дерева маршрутов
    * */
@@ -396,14 +396,15 @@ export class Navigator {
     routeParams: NavigatorParams = {}
   ) => {
     const prevState = this.getState();
-
     const routeNode: RouteNode = this.tree.getRouteNode(routeName);
+    
     const { data: routeData } = routeNode || { data: null };
+    const { subRouteKey } = this.config;
 
-    const subRouteKey = this.config.subRouteKey;
-
-    let params: NavigatorParams = { ...routeParams };
     const activeNodes = this.getActiveNodes(routeName);
+    
+    let params: NavigatorParams = { ...routeParams };
+
     if (routeNode?.parent?.name) {
       const activeParams: Record<string, any> = this.getActiveParams(
         activeNodes,
@@ -435,8 +436,8 @@ export class Navigator {
     return { newState, routeData, activeNodes };
   };
 
-  /** 
-   * Основной метод навигации роутера 
+  /**
+   * Основной метод навигации роутера
    * */
   public go = (
     routeName: string,
@@ -475,12 +476,12 @@ export class Navigator {
     }
   };
 
-  /**  
-   * Метод обновления URL браузера в зависимости от конфигурации и переданных опций 
+  /**
+   * Метод обновления URL браузера в зависимости от конфигурации и переданных опций
    * */
   public updateUrl = (
     state: NavigatorState,
-    options: NavigatorOptions = {},
+    opts: NavigatorOptions = {},
     title: string = ""
   ) => {
     const stateToHistory = {
@@ -489,7 +490,7 @@ export class Navigator {
       counter: this.history.length - 1,
     };
 
-    if (options.fakeEntry) {
+    if (opts.fakeEntry) {
       const currentUrl = browser.getLocation(this.config);
       browser.pushState(stateToHistory, title, currentUrl);
       return;
@@ -509,7 +510,7 @@ export class Navigator {
     const location = window.location.href.split("?")[0];
     const url = `${location}${this.config.base}${search}`;
 
-    if (options.replace) {
+    if (opts.replace) {
       browser.replaceState(stateToHistory, title, url);
     } else {
       browser.pushState(stateToHistory, title, url);
@@ -517,19 +518,7 @@ export class Navigator {
   };
 
   /**
-   * Основной метод навигации
-   * */
-  public navigate = (
-    to: string,
-    params?: any,
-    options: any = {},
-    done?: any
-  ) => {
-    return this.go(to, params, options, done);
-  };
-
-  /**
-   * Основной метод навигации назад
+   * Метод навигации назад
    * */
   public back: VoidFunction = () => {
     window.history.back();
@@ -543,9 +532,12 @@ export class Navigator {
   public start = (
     startRoute?: string,
     params?: NavigatorParams,
-    options?: NavigatorOptions
+    opts?: NavigatorOptions
   ) => {
+    const { defaultRoute } = this.config;
+    const [firstRoute] = this.routes;
     this.isStarted = true;
+
     this.removePopStateListener = browser.addPopstateListener(
       this.onPopState,
       this.config
@@ -565,15 +557,13 @@ export class Navigator {
 
       this.go(routeName, params, { firstLoad: true });
     } else if (startRoute) {
-      this.go(startRoute, params, options);
+      this.go(startRoute, params, opts);
     } else {
-      const { defaultRoute } = this.config;
       if (defaultRoute) {
         this.go(defaultRoute);
       } else {
-        const [startRoute] = this.routes;
-        if (startRoute && startRoute.name) {
-          this.go(startRoute.name);
+        if (firstRoute && firstRoute.name) {
+          this.go(firstRoute.name);
         } else {
           if (this.defaultState) {
             this.setState(this.defaultState);
@@ -584,8 +574,8 @@ export class Navigator {
     }
   };
 
-  /**  
-   * Метод жизненного цикла роутера, деактивирует роутер, удаляет обработчики событий. 
+  /**
+   * Метод жизненного цикла роутера, деактивирует роутер, удаляет обработчики событий.
    * */
   public stop = () => {
     this.isStarted = false;
@@ -593,11 +583,11 @@ export class Navigator {
     this.removePopStateListener();
   };
 
-  /**  
-   * Метод жизненного цикла роутера, возвращает текущее состояние роутера. 
+  /**
+   * Метод жизненного цикла роутера, возвращает текущее состояние роутера.
    * */
-  public getState: NavigatorGetState = (options = {}) => {
-    const { withoutHistory = false } = options;
+  public getState: NavigatorGetState = (opts = {}) => {
+    const { withoutHistory = false } = opts;
     let state = this.state;
 
     if (withoutHistory) {
@@ -610,26 +600,25 @@ export class Navigator {
     return state;
   };
 
-  /**  
-   * Метод жизненного цикла роутера, возвращает предыдущее состояние роутера. 
+  /**
+   * Метод жизненного цикла роутера, возвращает предыдущее состояние роутера.
    * */
-  public getPrevState: NavigatorGetState = (options = {}) => {
-    if (options.withoutHistory) {
+  public getPrevState: NavigatorGetState = (opts = {}) => {
+    if (opts.withoutHistory) {
       const { history, ...state } = this.prevState;
       return state;
     }
     return this.prevState;
   };
 
-  /**  
+  /**
    * Утилита роутера, возвращает булево значение
-   * является ли переданный роут с параметрами активными в данном состоянии роутера. 
+   * является ли переданный роут с параметрами активными в данном состоянии роутера.
    * */
   public isActive = (
     routeName: string,
     routeParams?: NavigatorParams,
-    strictCompare: boolean = true,
-    ignoreParams: boolean = false // в режиме query navigation  игнорируются все queryparams кроме обязательных
+    strictCompare: boolean = true
   ) => {
     const state = this.getState({ withoutHistory: true });
     const activeStateParams = state.params;
@@ -641,8 +630,7 @@ export class Navigator {
 
     const hasParamsInState = hasProperties(activeStateParams, routeParams);
 
-    const { newState: compareState } =
-      this.makeState(routeName, routeParams) || {};
+    const { newState: compareState } = this.makeState(routeName, routeParams);
 
     const areSameStates = deepEqual(state, compareState);
 
@@ -655,8 +643,8 @@ export class Navigator {
     return areSameStates || isActiveNode;
   };
 
-  /** 
-   * Метод жизненного цикла роутера, добавляет во внтруеннюю коллекцию обработчики  
+  /**
+   * Метод жизненного цикла роутера, добавляет во внтруеннюю коллекцию обработчики
    * */
   public canActivate = (
     routeName: string,
@@ -671,8 +659,8 @@ export type CreateNavigator = (
   config?: NavigatorConfig
 ) => Navigator;
 
-/** 
- * Фабрика для создания экземпляра роутера 
+/**
+ * Фабрика для создания экземпляра роутера
  * */
 export const createNavigator: CreateNavigator = (
   routes,

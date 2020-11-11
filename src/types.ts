@@ -12,6 +12,7 @@ export interface NavigatorConfig {
   persistentParams?: string[];
   subRouteKey?: string;
   routeKey?: string;
+  preserveHash?: boolean;
   errorLogger?: NavigatorErrorLogger;
 }
 

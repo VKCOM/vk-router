@@ -5,12 +5,11 @@ export type NavigatorErrorLogger = (errorStr: string) => void;
 
 export interface NavigatorConfig {
   defaultRoute: string;
+  rootPage: string;
   defaultParams?: any;
   queryParamsMode?: string;
   base?: string;
-  useAdapter?: boolean;
   persistentParams?: string[];
-  // useQueryNavigation?: boolean; // always true
   subRouteKey?: string;
   routeKey?: string;
   errorLogger?: NavigatorErrorLogger;
@@ -22,10 +21,6 @@ export interface NavigatorGetStateOptions {
 }
 
 export type NavigatorGetState = (options?: NavigatorGetStateOptions) => NavigatorState;
-
-export interface URLParamsCollection {
-  [key: string]: any;
-}
 
 export interface NavigatorParams {
   [key: string]: any;
@@ -53,7 +48,6 @@ export interface NavigatorRoute {
   subRoute?: boolean;
   updateUrl?: boolean;
   title?: string;
-  routePath?: string;
   children?: NavigatorRoute[];
 }
 
@@ -63,10 +57,6 @@ export interface NavigatorCreateOptions {
 }
 
 export type NavigatorCreate = (options: NavigatorCreateOptions) => Navigator;
-
-export interface NavigatorSubRoutes {
-  [key: string]: any;
-}
 
 export interface NavigatorHistoryRecord extends NavigatorState {}
 
@@ -103,7 +93,7 @@ export interface Browser {
   pushState(state: HistoryState, title: string | null, path: string): void;
   replaceState(state: HistoryState, title: string | null, path: string): void;
   addPopstateListener(fn: any, opts: any): any;
-  addLinkInterceptorListener(fn: any, opts?: any): any;
+  addLinkInterceptorListener(buildState: any, go: any): any;
   getLocation(opts: NavigatorConfig): string;
   getState(): HistoryState;
   getHash(): string;

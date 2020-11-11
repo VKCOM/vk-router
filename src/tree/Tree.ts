@@ -1,5 +1,5 @@
 import { NavigatorRoute } from "..";
-import { getParentPath, isPath, cutName, getByPath } from "./utils";
+import { getParentPath, isPath, getByPath } from "./utils";
 import {
   ERROR_TREE_PARENT_DOESNT_EXIST,
   ERROR_TREE_NO_ROUTE,
@@ -26,7 +26,6 @@ export default class TreeRoutes {
     }
     const rootData: RouteNode = {
       name: "",
-      routePath: "",
       params: "",
       children: [],
     };
@@ -159,11 +158,9 @@ const getParentNode = (routes: RouteNode[], path: string) => {
 };
 
 const makePreTreeRoute = (route: NavigatorRoute) => {
-  const { path, name, ...routeProps } = route;
+  const { path, ...routeProps } = route;
   const preTreeRoute: NavigatorRoute = {
-    ...routeProps,
-    name: cutName(name),
-    routePath: name
+    ...routeProps
   };
 
   return preTreeRoute;

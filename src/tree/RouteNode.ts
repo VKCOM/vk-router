@@ -1,6 +1,8 @@
+/**
+ * Класс описывающий узел дерева навигации
+ */
 export default class RouteNode {
     [key:string]: any;
-    path?: string;
     name: string;
     parent?: RouteNode | null;
     children?: RouteNode[];
@@ -8,9 +10,8 @@ export default class RouteNode {
     decodeParams?: () => {};
 
     constructor(data: RouteNode) {
-       const { name, routePath, params, encodeParams, decodeParams, ...rest} = data;
-       this.name = name; 
-       this.routePath = routePath;
+       const { name, params, encodeParams, decodeParams, ...rest} = data;
+       this.name = name;
        this.params = params || [];
        this.parent = null;
        this.data = rest;

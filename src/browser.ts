@@ -1,3 +1,6 @@
+/**
+ * Интерфейс для взаимодействия с api браузера
+ */
 import { Browser } from "./types";
 
 const getBase = () => window.location.pathname;
@@ -23,7 +26,7 @@ const isExternal = (url: string) => {
   return domain(window.location.href) !== domain(url);
 };
 
-const onLinkListener = function () {
+const onLinkListener = function (buildState: any, go: any) {
   return (e: any) => {
     if (1 !== which(e)) return;
 
@@ -45,20 +48,20 @@ const onLinkListener = function () {
     if (el.target) return;
     if (!el.href) return;
 
-    const toRouteState = this.buildState(el.href);
+    const toRouteState = buildState(el.href);
 
     if (toRouteState) {
       e.preventDefault();
       const routeName = toRouteState.modal || toRouteState.page;
       const params = toRouteState.params || {};
-      this.go(routeName, params);
+      go(routeName, params);
     }
   };
 };
 
-const addLinkInterceptorListener = function () {
+const addLinkInterceptorListener = (buildState: any, go: any) => {
   const clickEvent = document.ontouchstart ? "touchstart" : "click";
-  const clickHandler = onLinkListener.call(this);
+  const clickHandler = onLinkListener(buildState, go);
   document.addEventListener(clickEvent, clickHandler, false);
 
   return () => {

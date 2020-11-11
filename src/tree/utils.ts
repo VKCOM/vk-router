@@ -77,17 +77,6 @@ export const getParentPath = (path: string) => {
 
 export const isPath = (name: string) => name.includes('.');
 
-export const separateFromUrlParams = (name: string) => {
-  if (name) {
-
-  }
-}
-
-export const cutName = (path: string) => {
-  const segments = path.split('.');
-  return segments.splice(-1, 1)[0];
-}
-
 const getPathSegments = (pathToRoute: string) => {
   const segments = pathToRoute.split(".");
   let routePath = '';
@@ -106,7 +95,7 @@ export const getByPath = (routes: NavigatorRoute[] | RouteNode[], pathToRoute: s
   while (stack.length && segments.length) {
     const route = stack.shift();
     const [segment] = segments;
-    if (route.routePath === segment) {
+    if (route.name === segment) {
       if (segments.length > 1) {
         stack.push(...route.children);
         segments.shift();

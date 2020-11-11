@@ -28,6 +28,8 @@ import {
 import {
   ERROR_NO_ROUTES,
   // ERROR_HAS_TO_BE_ROUTE,
+  ERROR_TREE_DOESNT_EXIST,
+  ERROR_TREE_ALREADY_EXIST,
   ERROR_TREE_NO_ROUTE,
 } from "./constants";
 
@@ -43,6 +45,7 @@ const defaultConfig: NavigatorConfig = {
   base: "",
   subRouteKey: "subRoute",
   routeKey: "route",
+  rootPage: undefined,
 };
 
 /**
@@ -52,17 +55,23 @@ export class Navigator {
   public state: NavigatorState;
   public prevState: NavigatorState;
   public defaultState: NavigatorState;
+
   public history: NavigatorHistoryRecord[] = [];
+  
   public routes: NavigatorRoute[] = [];
+  
   private subscribers: NavigatorSubscriber[] = [];
+  
   private routeHandlerCollection: NavigatorRouteHandlerCollection = {};
+  
   public config: NavigatorConfig = defaultConfig;
 
   public isStarted = false;
 
   private errorLogger: NavigatorErrorLogger = (err) => console.log(err);
 
-  public tree: TreeRoutes;
+  public trees: Record<string, TreeRoutes> = {};
+  private tree: TreeRoutes;
 
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
@@ -96,11 +105,21 @@ export class Navigator {
       params: {},
     };
 
+    const initState = this.buildState(browser.getLocation(this.config));
+
     this.setState({
-      ...this.buildState(browser.getLocation(this.config)),
+      ...initState,
       history: this.history,
     });
   };
+
+  /**
+   * Метод получения внутреннего стека истории роутера
+   */
+  public getHistory() {
+    const historyStack = [...this.history];
+    return historyStack;
+  }
 
   /**
    * Метод жизненного цикла роутера - выполняет заполнение
@@ -109,13 +128,24 @@ export class Navigator {
    */
   private buildHistory = () => {
     const { page, params } = this.getState();
+    const { rootPage } = this.config; 
+    const historyStackLength = window.history.length;
+    /**
+     * Вхождение для rootPage 
+     */
+    if (page !== rootPage) {
+      const { newState: rootPageState } = this.makeState(rootPage);
+      this.history.push(rootPageState);
+      this.updateUrl(rootPageState);
+    }
+    
     const stack = [...this.getActiveNodes(page)];
 
     while (stack.length) {
       const node = stack.shift();
 
       const state: NavigatorState = {
-        page: node.routePath,
+        page: node.name,
         modal: null,
         params: this.getActiveParams([node], params),
       };
@@ -125,6 +155,8 @@ export class Navigator {
     }
   };
 
+  private currentPointer = 0;
+
   /**
    * Метод обработки события popstate, обеспечивает переход по внутреннему стеку истории роутера.
    * При достижении первого вхождения дальнейшие переходы назад в браузере
@@ -132,14 +164,15 @@ export class Navigator {
    */
   private onPopState = (event: PopStateEvent) => {
     const pointer = event.state?.counter;
-    const nextState = this.history[pointer];
-    const [rootState] = this.history;
+    const [firstEntry] = this.history;
+    const nextState = this.history[pointer] || firstEntry;
+    this.currentPointer = pointer;
 
     if (pointer !== undefined) {
       this.replaceState(nextState);
     } else {
-      this.replaceState(rootState);
-      this.updateUrl(rootState, { replace: true });
+        this.replaceState(firstEntry);
+        this.updateUrl(firstEntry, { replace: true });
     }
   };
 
@@ -168,6 +201,40 @@ export class Navigator {
   };
 
   /**
+   * Метод для выполнения callback функций переданных в метод go
+   */
+  public setActiveTree = (treeName: string) => {
+    if (this.trees[treeName]) {
+      this.tree = this.trees[treeName];
+    } else {
+      this.errorLogger(ERROR_TREE_DOESNT_EXIST);
+    }
+  };
+
+  /**
+   * Метод для добавления дерева навигации
+   */
+  public addTree = (treeName: string, routes: NavigatorRoute[]) => {
+    if (!this.trees[treeName]) {
+      const tree = createRoutesTree(routes);
+      this.trees[treeName] = tree;
+    } else {
+      this.errorLogger(ERROR_TREE_ALREADY_EXIST);
+    }
+  };
+
+  /**
+   * Метод для удаления дерева навигации
+   */
+  public removeTree = (treeName: string) => {
+    if (this.trees[treeName]) {
+      this.tree = this.trees[treeName];
+    } else {
+      this.errorLogger(ERROR_TREE_DOESNT_EXIST);
+    }
+  };
+
+  /**
    * Метод полностью заменяет состояние роутера на указанное в аргументе.
    * Для роута, на который осуществляется переход, и который не является модалкой,
    * выполняет функцию из коллекции routeHandlerCollection.
@@ -191,7 +258,7 @@ export class Navigator {
   /**
    * Метод жизненного цикла роутера - устанавливает переход в новое состояние роутера.
    * Пока выполняется синхронно.
-   */
+   */ 
   private setState = (state: Partial<NavigatorState>) => {
     const prevState = { ...this.state };
     const nextState = { ...this.state, ...state };
@@ -389,7 +456,7 @@ export class Navigator {
 
   /**
    * Утилита роутера, выполняет построение состояния роутера на основе
-   * переданного имени маршрута, параметров, а так же построенного дерева маршрутов
+   * переданного имени роута, параметров, а так же текущего активного дерева роутов
    * */
   private makeState = (
     routeName: string,
@@ -397,12 +464,12 @@ export class Navigator {
   ) => {
     const prevState = this.getState();
     const routeNode: RouteNode = this.tree.getRouteNode(routeName);
-    
+
     const { data: routeData } = routeNode || { data: null };
     const { subRouteKey } = this.config;
 
     const activeNodes = this.getActiveNodes(routeName);
-    
+
     let params: NavigatorParams = { ...routeParams };
 
     if (routeNode?.parent?.name) {
@@ -430,7 +497,7 @@ export class Navigator {
           ...prevState.params,
           ...routeParams,
         },
-        modal: routeNode.routePath,
+        modal: routeNode.name,
       };
     }
     return { newState, routeData, activeNodes };
@@ -446,12 +513,12 @@ export class Navigator {
     done?: NavigatorDone
   ) => {
     const { newState, routeData } = this.makeState(routeName, routeParams);
-
-    const prevHistoryState = this.history[this.history.length - 2];
+    const historyLength = this.history.length;
+    const prevHistoryState = this.history[historyLength - 2];
     const isBack = deepEqual(prevHistoryState, newState);
 
     if (options.firstLoad) {
-      const beforeHistoryState = this.history[this.history.length - 1];
+      const beforeHistoryState = this.history[historyLength - 1];
       const sameState = deepEqual(beforeHistoryState, newState);
       if (sameState) return;
     }
@@ -489,7 +556,7 @@ export class Navigator {
       ...state.params,
       counter: this.history.length - 1,
     };
-
+  
     if (opts.fakeEntry) {
       const currentUrl = browser.getLocation(this.config);
       browser.pushState(stateToHistory, title, currentUrl);
@@ -518,7 +585,7 @@ export class Navigator {
   };
 
   /**
-   * Метод навигации назад
+   * Метод навигации назад - дергает history.back()
    * */
   public back: VoidFunction = () => {
     window.history.back();
@@ -534,6 +601,7 @@ export class Navigator {
     params?: NavigatorParams,
     opts?: NavigatorOptions
   ) => {
+    const initState = this.getState();
     const { defaultRoute } = this.config;
     const [firstRoute] = this.routes;
     this.isStarted = true;
@@ -543,12 +611,13 @@ export class Navigator {
       this.config
     );
 
-    this.removeLinkPressListener = browser.addLinkInterceptorListener.call(
-      this
+    this.removeLinkPressListener = browser.addLinkInterceptorListener(
+      this.buildState,
+      this.go
     );
-
-    const initState = this.getState();
-
+    /**
+     * Заполняем стек истории до перехода на активный роут
+     */
     this.buildHistory();
 
     if (initState && initState.page) {
@@ -613,19 +682,20 @@ export class Navigator {
 
   /**
    * Утилита роутера, возвращает булево значение
-   * является ли переданный роут с параметрами активными в данном состоянии роутера.
+   * является ли переданный роут с параметрами активным в данном состоянии роутера.
    * */
   public isActive = (
     routeName: string,
     routeParams?: NavigatorParams,
-    strictCompare: boolean = true
+    strictCompare: boolean = true,
+    ignoreUnnecessaryParams: boolean = false, // игнорирование необязятельных параметров, 
   ) => {
     const state = this.getState({ withoutHistory: true });
     const activeStateParams = state.params;
     const activeRouteNodes = this.getActiveNodes(state.page);
     const acitveModalNodes = this.getActiveNodes(state.modal);
     const activeNodes = activeRouteNodes.concat(acitveModalNodes);
-    const activeNode = activeNodes.find((el) => el.routePath === routeName);
+    const activeNode = activeNodes.find((el: RouteNode) => el.name === routeName);
     const isActiveNode = !!activeNode;
 
     const hasParamsInState = hasProperties(activeStateParams, routeParams);
@@ -644,7 +714,8 @@ export class Navigator {
   };
 
   /**
-   * Метод жизненного цикла роутера, добавляет во внтруеннюю коллекцию обработчики
+   * Метод жизненного цикла роутера, добавляет во внтруеннюю коллекцию обработчик
+   * выполняемый при переходе на указанный роут
    * */
   public canActivate = (
     routeName: string,

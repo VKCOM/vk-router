@@ -44,8 +44,4 @@ export interface CoreParams {
 export interface HistoryRecord extends CoreParams {
 }
 
-export interface URLParamsCollection {
-    [key: string]: any
-}
-
 export type TreeCallback = (node: RouteNode) => void;

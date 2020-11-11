@@ -9,3 +9,4 @@ export const ERROR_NODE_TO_REMOVE_NOT_EXIST = 'Node to remove does not exist'
 export const ERROR_PARENT_DOESNT_EXIST = 'Parent does not exist';
 export const ERROR_TREE_DOESNT_EXIST = 'Tree does not exist';
 export const ERROR_TREE_ALREADY_EXIST = 'Tree with such name already exists';
+export const ERROR_ALREADY_SUBSCRIBED = 'This listener is already subscribed';

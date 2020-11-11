@@ -1,5 +1,5 @@
 /**
- * Класс описывающий узел дерева навигации
+ * Класс узла дерева навигации
  */
 export default class RouteNode {
     [key:string]: any;

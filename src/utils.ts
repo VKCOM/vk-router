@@ -203,3 +203,12 @@ export const deepEqual = (
 };
 
 export const isChildRoute = (route: string) => route.includes(".");
+
+export const cleanFields = (keys: string[], paramsPool: Record<string, any>) => {
+  const params: Record<string, any> = {};
+  while (keys.length) {
+    const key = keys.shift();
+    params[key] = paramsPool[key];
+  }
+  return params;
+}

@@ -9,6 +9,7 @@ import {
   urlToPath,
   deepEqual,
   hasProperties,
+  cleanFields,
 } from "./utils";
 import {
   NavigatorRoute,
@@ -31,6 +32,7 @@ import {
   ERROR_TREE_DOESNT_EXIST,
   ERROR_TREE_ALREADY_EXIST,
   ERROR_TREE_NO_ROUTE,
+  ERROR_ALREADY_SUBSCRIBED,
 } from "./constants";
 
 import browser from "./browser";
@@ -57,13 +59,13 @@ export class Navigator {
   public defaultState: NavigatorState;
 
   public history: NavigatorHistoryRecord[] = [];
-  
+
   public routes: NavigatorRoute[] = [];
-  
+
   private subscribers: NavigatorSubscriber[] = [];
-  
+
   private routeHandlerCollection: NavigatorRouteHandlerCollection = {};
-  
+
   public config: NavigatorConfig = defaultConfig;
 
   public isStarted = false;
@@ -79,15 +81,21 @@ export class Navigator {
   constructor(routes?: NavigatorRoute[], config?: NavigatorConfig) {
     this.routes = routes || [];
     this.config = { ...defaultConfig, ...config };
-
+    /**
+     * Установка логгера ошибок из объекта конфигурации
+     */
     this.errorLogger = this.config.errorLogger
       ? this.config.errorLogger
       : this.errorLogger;
-
+    /**
+     * Создание основного дерева навигации
+     */
     this.tree = createRoutesTree(this.routes, {
       errorLogger: this.errorLogger,
     });
-
+    /**
+     * Выполнение этапа инициализации начального состояния роутера
+     */
     this.initialize();
   }
 
@@ -104,13 +112,12 @@ export class Navigator {
       modal: null,
       params: {},
     };
-
+    /**
+     * собираем начальное состояние из URL
+     */
     const initState = this.buildState(browser.getLocation(this.config));
 
-    this.setState({
-      ...initState,
-      history: this.history,
-    });
+    this.setState(initState);
   };
 
   /**
@@ -128,17 +135,17 @@ export class Navigator {
    */
   private buildHistory = () => {
     const { page, params } = this.getState();
-    const { rootPage } = this.config; 
+    const { rootPage } = this.config;
     const historyStackLength = window.history.length;
     /**
-     * Вхождение для rootPage 
+     * Вхождение для rootPage
      */
     if (page !== rootPage) {
       const { newState: rootPageState } = this.makeState(rootPage);
       this.history.push(rootPageState);
       this.updateUrl(rootPageState);
     }
-    
+
     const stack = [...this.getActiveNodes(page)];
 
     while (stack.length) {
@@ -164,15 +171,18 @@ export class Navigator {
    */
   private onPopState = (event: PopStateEvent) => {
     const pointer = event.state?.counter;
-    const [firstEntry] = this.history;
-    const nextState = this.history[pointer] || firstEntry;
+    const [rootState] = this.history;
+    const pointedState = this.history[pointer];
+    const nextState = pointedState || rootState;
     this.currentPointer = pointer;
-
+    /**
+     *
+     */
     if (pointer !== undefined) {
       this.replaceState(nextState);
-    } else {
-        this.replaceState(firstEntry);
-        this.updateUrl(firstEntry, { replace: true });
+    } else if (pointer === undefined || !pointedState) {
+      this.replaceState(rootState);
+      this.updateUrl(rootState, { replace: true });
     }
   };
 
@@ -258,7 +268,7 @@ export class Navigator {
   /**
    * Метод жизненного цикла роутера - устанавливает переход в новое состояние роутера.
    * Пока выполняется синхронно.
-   */ 
+   */
   private setState = (state: Partial<NavigatorState>) => {
     const prevState = { ...this.state };
     const nextState = { ...this.state, ...state };
@@ -310,6 +320,8 @@ export class Navigator {
       this.broadCastState();
 
       return () => this.unsubscribe(subscriber);
+    } else {
+      this.errorLogger(ERROR_ALREADY_SUBSCRIBED);
     }
   };
 
@@ -419,18 +431,19 @@ export class Navigator {
    * */
   private getRequiredParams = (node: RouteNode) => {
     let params: string[] = [];
-    const stack = [node];
+    if (node) {
+      const stack = [node];
 
-    while (stack.length) {
-      const node = stack.shift();
-      if (node?.params) {
-        params = params.concat(node?.params);
-        if (node.parent) {
-          stack.push(node.parent);
+      while (stack.length) {
+        const node = stack.shift();
+        if (node?.params) {
+          params = params.concat(node?.params);
+          if (node.parent) {
+            stack.push(node.parent);
+          }
         }
       }
     }
-
     return params;
   };
 
@@ -556,7 +569,7 @@ export class Navigator {
       ...state.params,
       counter: this.history.length - 1,
     };
-  
+
     if (opts.fakeEntry) {
       const currentUrl = browser.getLocation(this.config);
       browser.pushState(stateToHistory, title, currentUrl);
@@ -574,8 +587,8 @@ export class Navigator {
 
     const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? "?" + buildedSearch : "";
-    const location = window.location.href.split("?")[0];
-    const url = `${location}${this.config.base}${search}`;
+    const location = browser.getLocation(this.config, search);
+    const url = `${location}${this.config.base}`;
 
     if (opts.replace) {
       browser.replaceState(stateToHistory, title, url);
@@ -604,22 +617,32 @@ export class Navigator {
     const initState = this.getState();
     const { defaultRoute } = this.config;
     const [firstRoute] = this.routes;
+    /**
+     * Установка роутера в активное состояние
+     */
     this.isStarted = true;
-
+    /**
+     * Привязка обработчика popstate
+     */
     this.removePopStateListener = browser.addPopstateListener(
       this.onPopState,
       this.config
     );
-
+    /**
+     * Привязка обработчика перехвата нажатия на ссылки
+     */
     this.removeLinkPressListener = browser.addLinkInterceptorListener(
       this.buildState,
       this.go
     );
     /**
-     * Заполняем стек истории до перехода на активный роут
+     * Заполнение стека истории до перехода на активный роут
      */
     this.buildHistory();
-
+    /**
+     * Выполнение перехода на начальный роут и добавление записи в историю,
+     * обработка случая если роуты отсутствуют.
+     */
     if (initState && initState.page) {
       const routeName = initState.modal || initState.page;
       const params = initState.params;
@@ -634,9 +657,6 @@ export class Navigator {
         if (firstRoute && firstRoute.name) {
           this.go(firstRoute.name);
         } else {
-          if (this.defaultState) {
-            this.setState(this.defaultState);
-          }
           this.errorLogger(ERROR_NO_ROUTES);
         }
       }
@@ -647,6 +667,9 @@ export class Navigator {
    * Метод жизненного цикла роутера, деактивирует роутер, удаляет обработчики событий.
    * */
   public stop = () => {
+    /**
+     * Установка роутера в неактивное состояние
+     */
     this.isStarted = false;
     this.removeLinkPressListener();
     this.removePopStateListener();
@@ -684,23 +707,31 @@ export class Navigator {
    * Утилита роутера, возвращает булево значение
    * является ли переданный роут с параметрами активным в данном состоянии роутера.
    * */
+  
   public isActive = (
     routeName: string,
     routeParams?: NavigatorParams,
     strictCompare: boolean = true,
-    ignoreUnnecessaryParams: boolean = false, // игнорирование необязятельных параметров, 
+    ignoreQueryParams: boolean = false // игнорирование необязятельных query параметров,
   ) => {
     const state = this.getState({ withoutHistory: true });
     const activeStateParams = state.params;
     const activeRouteNodes = this.getActiveNodes(state.page);
     const acitveModalNodes = this.getActiveNodes(state.modal);
     const activeNodes = activeRouteNodes.concat(acitveModalNodes);
-    const activeNode = activeNodes.find((el: RouteNode) => el.name === routeName);
+    const activeNode = activeNodes.find(
+      (el: RouteNode) => el.name === routeName
+    );
     const isActiveNode = !!activeNode;
+    const requiredNodeParams = this.getRequiredParams(activeNode);
+    const compareRouteParams = ignoreQueryParams ? cleanFields(requiredNodeParams, routeParams) : routeParams;
+    if(routeName==='school.messages'){
+      console.log('school.messages', routeParams, requiredNodeParams, compareRouteParams);
+    }
 
-    const hasParamsInState = hasProperties(activeStateParams, routeParams);
+    const hasParamsInState = hasProperties(activeStateParams, compareRouteParams);
 
-    const { newState: compareState } = this.makeState(routeName, routeParams);
+    const { newState: compareState } = this.makeState(routeName, compareRouteParams);
 
     const areSameStates = deepEqual(state, compareState);
 

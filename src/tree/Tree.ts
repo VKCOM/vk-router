@@ -16,6 +16,9 @@ export interface TreeRoutesConfig {
   useAdapter?: boolean;
 }
 
+/**
+ * Класс дерева навигации. Хранит узлы навигации и содержит в себе методы поиска удаления/добавления узлов дерева.
+ */
 export default class TreeRoutes {
   private root: RouteNode;
   private errorLogger = (err: string, arg?: string) => console.error(err, arg);
@@ -205,6 +208,9 @@ const createPreTree = (routes: NavigatorRoute[]) => {
   return preTree;
 };
 
+/**
+ * Фабрика создания объекта дерева
+ */
 export function createRoutesTree(
   routes: RouteNode[],
   config: TreeRoutesConfig = {}

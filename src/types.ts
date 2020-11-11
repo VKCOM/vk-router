@@ -94,7 +94,7 @@ export interface Browser {
   replaceState(state: HistoryState, title: string | null, path: string): void;
   addPopstateListener(fn: any, opts: any): any;
   addLinkInterceptorListener(buildState: any, go: any): any;
-  getLocation(opts: NavigatorConfig): string;
+  getLocation(opts: NavigatorConfig, search?: string): string;
   getState(): HistoryState;
   getHash(): string;
 }

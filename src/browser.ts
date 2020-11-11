@@ -96,13 +96,13 @@ const safelyEncodePath = (path: any) => {
   }
 };
 
-const getLocation = (opts: any) => {
-  const path = opts.useHash
-    ? window.location.hash.replace(new RegExp("^#" + opts.hashPrefix), "")
-    : window.location.pathname.replace(new RegExp("^" + opts.base), "");
+const getLocation = (opts: any, search: any) => {
+  const path = opts.preserveHash 
+    ? window.location.pathname.replace(new RegExp("^"), "") 
+    : window.location.hash.replace(new RegExp("^#"), "");
 
   const correctedPath = safelyEncodePath(path);
-  return (correctedPath || "/") + window.location.search;
+  return (correctedPath || "/") + (search || window.location.search);
 };
 
 const getState = () => window.history.state;

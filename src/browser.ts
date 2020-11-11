@@ -97,10 +97,10 @@ const safelyEncodePath = (path: any) => {
 };
 
 const getLocation = (opts: any, search: any) => {
-  const path = opts.preserveHash 
-    ? window.location.pathname.replace(new RegExp("^"), "") 
-    : window.location.hash.replace(new RegExp("^#"), "");
-
+  const pathname = opts.preservePath ? getBase() : '';
+  const path = pathname + opts.preserveHash 
+  ? window.location.pathname.replace(new RegExp("^"), "") 
+  : window.location.hash.replace(new RegExp("^#"), "");
   const correctedPath = safelyEncodePath(path);
   return (correctedPath || "/") + (search || window.location.search);
 };

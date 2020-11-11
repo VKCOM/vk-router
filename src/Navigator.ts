@@ -48,33 +48,64 @@ const defaultConfig: NavigatorConfig = {
   subRouteKey: "subRoute",
   routeKey: "route",
   rootPage: undefined,
+  preserveHash: false,
+  preservePath: true,
 };
 
 /**
  * Главный класс, описывающий основные методы жизненного цикла роутера
  */
 export class Navigator {
+  /**
+   * Основное состояние роутера, отдаваемое наружу
+   */
   public state: NavigatorState;
+  /**
+   * Предыдущее состояние роутера, отдаваемое наружу
+   */
   public prevState: NavigatorState;
+  /**
+   * fallback состояние для перехода на него в случае ошибок
+   */
   public defaultState: NavigatorState;
-
+  /**
+   * Внутренний стек навигации
+   */
   public history: NavigatorHistoryRecord[] = [];
-
+  /**
+   * Ссылка на переданные в конфиге коллекции маршрутов
+   */
   public routes: NavigatorRoute[] = [];
-
+  /**
+   * Коллекция подписчиков на роутер
+   */
   private subscribers: NavigatorSubscriber[] = [];
-
+  /**
+   * Коллекция хендлеров исполняемых при переходе на соответствующий роут
+   */
   private routeHandlerCollection: NavigatorRouteHandlerCollection = {};
-
+  /**
+   * Текущий объект конфигурации роутера
+   */
   public config: NavigatorConfig = defaultConfig;
-
+  /**
+   * Состояние активации роутера
+   */
   public isStarted = false;
-
+  /**
+   * Логгер ошибок роутера - используется по всему модулю
+   */
   private errorLogger: NavigatorErrorLogger = (err) => console.log(err);
-
+  /**
+   * Коллекция деревьев навигации, может ббыть использована для смены заданной навигации
+   * через метод setActiveTree
+   */
   public trees: Record<string, TreeRoutes> = {};
+  /**
+   * Текущее активное дерево
+   */
   private tree: TreeRoutes;
-
+  
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
 
@@ -136,7 +167,6 @@ export class Navigator {
   private buildHistory = () => {
     const { page, params } = this.getState();
     const { rootPage } = this.config;
-    const historyStackLength = window.history.length;
     /**
      * Вхождение для rootPage
      */
@@ -725,10 +755,6 @@ export class Navigator {
     const isActiveNode = !!activeNode;
     const requiredNodeParams = this.getRequiredParams(activeNode);
     const compareRouteParams = ignoreQueryParams ? cleanFields(requiredNodeParams, routeParams) : routeParams;
-    if(routeName==='school.messages'){
-      console.log('school.messages', routeParams, requiredNodeParams, compareRouteParams);
-    }
-
     const hasParamsInState = hasProperties(activeStateParams, compareRouteParams);
 
     const { newState: compareState } = this.makeState(routeName, compareRouteParams);

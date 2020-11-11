@@ -13,6 +13,7 @@ export interface NavigatorConfig {
   subRouteKey?: string;
   routeKey?: string;
   preserveHash?: boolean;
+  preservePath?: boolean;
   errorLogger?: NavigatorErrorLogger;
 }
 

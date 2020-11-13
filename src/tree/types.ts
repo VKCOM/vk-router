@@ -27,4 +27,6 @@ export interface HistoryState {
   [key: string]: any;
 }
 
+export type RouteEncodeDecode = (params: Record<string, any>) => Record<string, any>;
+
 export type TreeCallback = (node: RouteNode) => void;

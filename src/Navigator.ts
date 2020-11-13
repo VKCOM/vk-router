@@ -516,12 +516,12 @@ export class Navigator {
     const prevState = this.getState();
     const routeNode: RouteNode = this.tree.getRouteNode(routeName);
 
-    const { data: routeData } = routeNode || { data: null };
+    const { data: routeData, decodeParams, encodeParams } = routeNode;
     const { subRouteKey } = this.config;
 
     const activeNodes = this.getActiveNodes(routeName);
-
-    let params: NavigatorParams = { ...routeParams };
+ 
+    let params: NavigatorParams = { ...routeParams};
 
     if (routeNode?.parent?.name) {
       const activeParams: Record<string, any> = this.getActiveParams(
@@ -551,7 +551,8 @@ export class Navigator {
         modal: routeNode.name,
       };
     }
-    return { newState, routeData, activeNodes };
+
+    return { newState, routeData, activeNodes, encodeParams, decodeParams };
   };
 
   /**
@@ -563,7 +564,7 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
-    const { newState, routeData } = this.makeState(routeName, routeParams);
+    const { newState, routeData, encodeParams, decodeParams } = this.makeState(routeName, routeParams);
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
 
@@ -581,8 +582,17 @@ export class Navigator {
       this.history.push(newState);
     }
 
+    if (decodeParams) {
+      newState.params = decodeParams(newState.params);
+    }
+
     this.setState(newState);
+    
     const prevState = this.getPrevState();
+    
+    if (encodeParams) {
+      newState.params = encodeParams(newState.params);
+    }
 
     if (routeData && routeData.updateUrl !== false) {
       this.updateUrl(newState, options);

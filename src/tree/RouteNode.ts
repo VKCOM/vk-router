@@ -1,13 +1,14 @@
 /**
  * Класс узла дерева навигации
  */
+import { RouteEncodeDecode } from './types';
 export default class RouteNode {
     [key:string]: any;
     name: string;
     parent?: RouteNode | null;
     children?: RouteNode[];
-    encodeParams?: () => {};
-    decodeParams?: () => {};
+    encodeParams?: RouteEncodeDecode;
+    decodeParams?: RouteEncodeDecode;
 
     constructor(data: RouteNode) {
        const { name, params, encodeParams, decodeParams, ...rest} = data;

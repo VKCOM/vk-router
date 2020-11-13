@@ -175,7 +175,7 @@ export const hasProperties = (
 export const deepEqual = (
   object1: any,
   object2: any,
-  strictValueCompare: boolean = false
+  strictValueCompare: boolean = true
 ) => {
   if (!object1 || !object2) {
     return false;

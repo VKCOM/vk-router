@@ -67,12 +67,14 @@ export interface NavigatorState {
   modal?: string;
   history?: NavigatorHistoryRecord[];
   params: NavigatorParams;
+  counter?: number;
   activeNodes?: RouteNode[];
 }
 
 export interface NavigatorStatesToSubscriber {
   toState: NavigatorState;
   fromState: NavigatorState;
+  history: NavigatorState[];
 }
 
 export type NavigatorSubscriber = (state: NavigatorStatesToSubscriber) => void;

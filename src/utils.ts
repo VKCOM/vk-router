@@ -212,3 +212,5 @@ export const cleanFields = (keys: string[], paramsPool: Record<string, any>) => 
   }
   return params;
 }
+
+export const uniqueBrowserSessionId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

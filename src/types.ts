@@ -18,20 +18,16 @@ export interface NavigatorConfig {
 }
 
 export interface NavigatorGetStateOptions {
-  withoutHistory?: boolean
-  routeParams?: boolean
+  withoutHistory?: boolean;
+  routeParams?: boolean;
 }
 
-export type NavigatorGetState = (options?: NavigatorGetStateOptions) => NavigatorState;
+export type NavigatorGetState = (
+  options?: NavigatorGetStateOptions
+) => NavigatorState;
 
 export interface NavigatorParams {
   [key: string]: any;
-  route?: {
-    [key: string]: any;
-  };
-  subroute?: {
-    [key: string]: any;
-  };
 }
 
 export type NavigatorRouteProperties = Record<string, any>;
@@ -45,7 +41,6 @@ export interface NavigatorOptions {
 export interface NavigatorRoute {
   [key: string]: any;
   name: string;
-  path?: string;
   params?: NavigatorParams;
   subRoute?: boolean;
   updateUrl?: boolean;
@@ -108,3 +103,26 @@ export interface HistoryState {
 }
 
 export interface HistoryRecord extends NavigatorState {}
+
+export interface BrowserOptions {
+  forceDeactivate?: boolean;
+  useHash?: boolean;
+  hashPrefix?: string;
+  base?: string | null;
+  mergeState?: boolean;
+  preserveHash?: boolean;
+  useQueryNavigation?: boolean;
+  sourceRoutes?: any[];
+  defaultPath?: string;
+  subRouteKey?: string;
+}
+
+export interface Browser {
+  getBase(): string;
+  pushState(state: HistoryState, title: string | null, path: string): void;
+  replaceState(state: HistoryState, title: string | null, path: string): void;
+  addPopstateListener(fn: any, opts: any): any;
+  getLocation(opts: BrowserOptions): string;
+  getState(): HistoryState;
+  getHash(): string;
+}

@@ -176,7 +176,8 @@ export class Navigator {
       this.updateUrl(rootPageState);
     }
     /**
-     * Заполняем стек для остальных страниц
+     * Заполняем стек для остальных страниц, если не задан rootPage, 
+     * то рутовым станет первое вхождение в историю
      */
     const stack = [...this.getActiveNodes(page)];
 
@@ -210,8 +211,6 @@ export class Navigator {
      * Заменяем текущее состояние если идем обратно.
      * Если страницы нет в стеке - заменяем на rootState
      * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
-     * и при шаге вперед
-     *
      */
     if (pointer !== undefined && isSameSession) {
       this.replaceState(nextState);
@@ -758,7 +757,7 @@ export class Navigator {
   public isActive = (
     routeName: string,
     routeParams?: NavigatorParams,
-    strictCompare: boolean = true,
+    strictCompare: boolean = true, // строгое сравнение со всеми параметрами
     ignoreQueryParams: boolean = false // игнорирование необязятельных query параметров,
   ) => {
     const state = this.getState({ withoutHistory: true });
@@ -774,6 +773,7 @@ export class Navigator {
     const compareRouteParams = ignoreQueryParams
       ? cleanFields(requiredNodeParams, routeParams)
       : routeParams;
+
     const hasParamsInState = hasProperties(
       activeStateParams,
       compareRouteParams

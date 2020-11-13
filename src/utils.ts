@@ -37,9 +37,11 @@ export const getQueryParams = (path: string) => {
   const decodedQueryString: Record<string, any> = {};
   const processedString =
     path && path.includes("?") ? path.slice(path.indexOf("?") + 1) : "";
+
   if (!processedString.length) {
     return decodedQueryString;
   }
+
   const queryStringPieces = processedString ? processedString.split("&") : [];
 
   for (const piece of queryStringPieces) {
@@ -204,13 +206,18 @@ export const deepEqual = (
 
 export const isChildRoute = (route: string) => route.includes(".");
 
-export const cleanFields = (keys: string[], paramsPool: Record<string, any>) => {
+export const cleanFields = (
+  keys: string[],
+  paramsPool: Record<string, any>
+) => {
   const params: Record<string, any> = {};
   while (keys.length) {
     const key = keys.shift();
     params[key] = paramsPool[key];
   }
   return params;
-}
+};
 
-export const uniqueBrowserSessionId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+export const uniqueBrowserSessionId = () =>
+  Math.random().toString(36).substring(2, 15) +
+  Math.random().toString(36).substring(2, 15);

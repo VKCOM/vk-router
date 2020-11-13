@@ -1,5 +1,5 @@
 {
-  "name": "navigator",
+  "name": "vk-router",
   "version": "1.0.0",
   "description": "Навигационный модуль",
   "main": "dist/index.js",

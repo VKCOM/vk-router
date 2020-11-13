@@ -102,9 +102,9 @@ export class Navigator {
    * Текущее активное дерево
    */
   private tree: TreeRoutes;
-  
+
   private browserSessionId: string;
-  
+
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
 
@@ -204,19 +204,20 @@ export class Navigator {
     const [rootState] = this.history;
     const pointedState = this.history[pointer];
     const nextState = pointedState || rootState;
-    const isSameSession = event.state?.browserSessionId === this.browserSessionId;
+    const isSameSession =
+      event.state?.browserSessionId === this.browserSessionId;
     /**
      * Заменяем текущее состояние если идем обратно.
      * Если страницы нет в стеке - заменяем на rootState
      * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
-     * и при шаге вперед 
-     * 
+     * и при шаге вперед
+     *
      */
     if (pointer !== undefined && isSameSession) {
       this.replaceState(nextState);
     } else if (!isSameSession || !pointedState) {
       this.replaceState(rootState);
-      this.updateUrl({...rootState, counter: 0 }, { replace: true });
+      this.updateUrl({ ...rootState, counter: 0 }, { replace: true });
     }
   };
 
@@ -496,8 +497,8 @@ export class Navigator {
     while (stack.length) {
       const node = stack.shift();
       const keys: string[] = this.getRequiredParams(node);
-      
-      keys.forEach((key)=> {
+
+      keys.forEach((key) => {
         activeParams[key] = paramsPool[key];
       });
     }
@@ -520,8 +521,8 @@ export class Navigator {
     const { subRouteKey } = this.config;
 
     const activeNodes = this.getActiveNodes(routeName);
- 
-    let params: NavigatorParams = { ...routeParams};
+
+    let params: NavigatorParams = { ...routeParams };
 
     if (routeNode?.parent?.name) {
       const activeParams: Record<string, any> = this.getActiveParams(
@@ -564,7 +565,10 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
-    const { newState, routeData, encodeParams, decodeParams } = this.makeState(routeName, routeParams);
+    const { newState, routeData, encodeParams, decodeParams } = this.makeState(
+      routeName,
+      routeParams
+    );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
 
@@ -587,9 +591,9 @@ export class Navigator {
     }
 
     this.setState(newState);
-    
+
     const prevState = this.getPrevState();
-    
+
     if (encodeParams) {
       newState.params = encodeParams(newState.params);
     }
@@ -613,19 +617,19 @@ export class Navigator {
     opts: NavigatorOptions = {},
     title: string = ""
   ) => {
-    const counter = this.history.length - 1; 
+    const counter = this.history.length - 1;
     let stateToHistory: Record<string, any> = {
       ...state,
       browserSessionId: this.browserSessionId,
       counter,
     };
-    
+
     if (opts.replace) {
       stateToHistory = {
         ...state,
         counter: state.counter ?? counter,
         browserSessionId: this.browserSessionId,
-      }
+      };
     }
 
     if (opts.fakeEntry) {

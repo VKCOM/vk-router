@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react",
+    "module": "es6",
+    "sourceMap": true,
+    "removeComments": true,
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "declaration": true,
+    "declarationDir": "./dist/types",
+    "preserveConstEnums": true,
+    "target": "es5",
+    "rootDir": "src"
+  },
+  "exclude": [
+    "node_modules",
+  ]
+}

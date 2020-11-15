@@ -1,0 +1,9 @@
+*.log
+node_modules/
+build_sourcemaps/
+dist/
+.idea/*.iws
+.idea/workspace.xml
+.idea/tasks.xml
+.DS_Store
+.vscode/

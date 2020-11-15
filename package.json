@@ -1,0 +1,40 @@
+{
+  "name": "@vkontakte/router",
+  "version": "0.0.1",
+  "description": "VK Web Router",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "repository": "https://github.com/VKCOM/vk-router",
+  "author": "VK Team <https://vk.com/team>",
+  "scripts": {
+    "clear": "rm -rf dist",
+    "build": "yarn clear && rollup -c",
+    "dev": "yarn clear && rollup -c -w",
+    "test": "yarn eslint && tsc --noEmit",
+    "eslint": "eslint ./src --ext .ts,.tsx",
+    "prepublishOnly": "yarn clear && yarn build",
+    "publish-package": "yarn install --check-files && yarn publish --non-interactive --access public"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/VKCOM/vk-router",
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^8.4.0",
+    "@rollup/plugin-typescript": "^5.0.2",
+    "mocha": "^8.1.3",
+    "rollup": "^2.21.0",
+    "rollup-plugin-terser": "^6.1.0",
+    "tslib": "^2.0.0",
+    "typescript": "^3.9.6",
+    "@typescript-eslint/eslint-plugin": "^4.7.0",
+    "@vkontakte/eslint-config": "^2.5.0",
+    "eslint": "^7.13.0"
+  },
+  "dependencies": {
+    "@types/react": "^16.9.44",
+    "@types/react-dom": "^16.9.8"
+  },
+  "peerDependencies": {
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  }
+}

@@ -1,7 +1,8 @@
+import { RouteEncodeDecode } from './types';
+
 /**
  * Класс узла дерева навигации
  */
-import { RouteEncodeDecode } from './types';
 export default class RouteNode {
   [key: string]: any;
   name: string;

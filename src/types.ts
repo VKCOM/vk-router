@@ -14,6 +14,8 @@ export interface NavigatorConfig {
   routeKey?: string;
   preserveHash?: boolean;
   preservePath?: boolean;
+  fillStackToBrowser?: boolean;
+  useBrowserStack?: boolean;
   errorLogger?: NavigatorErrorLogger;
 }
 

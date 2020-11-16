@@ -1,4 +1,5 @@
 // ERRORS
+export const ERROR_ROUTER_NOT_STARTED = 'Router is not started';
 export const ERROR_INVALID_PARAMS = 'Params are not defined as object';
 export const ERROR_NO_ROUTES = 'No routes specified';
 export const ERROR_TREE_PARENT_DOESNT_EXIST = 'Cannot add node to a non-existent parent';

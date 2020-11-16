@@ -6,7 +6,6 @@ import {
   deepEqual,
   hasProperties,
   cleanFields,
-  uniqueBrowserSessionId,
 } from './utils';
 import {
   NavigatorRoute,
@@ -25,6 +24,7 @@ import {
 
 import {
   ERROR_NO_ROUTES,
+  ERROR_ROUTER_NOT_STARTED,
   // ERROR_HAS_TO_BE_ROUTE,
   ERROR_TREE_DOESNT_EXIST,
   ERROR_TREE_ALREADY_EXIST,
@@ -35,7 +35,6 @@ import {
 import browser from './browser';
 import TreeRoutes from './tree/Tree';
 import RouteNode from './tree/RouteNode';
-
 /**
  * Объект конфигурации по умолчанию
  */
@@ -47,6 +46,8 @@ const defaultConfig: NavigatorConfig = {
   rootPage: undefined,
   preserveHash: false,
   preservePath: true,
+  fillStackToBrowser: false,
+  useBrowserStack: false,
 };
 
 /**
@@ -94,7 +95,7 @@ export class Navigator {
    */
   private readonly errorLogger: NavigatorErrorLogger = (err) => console.log(err);
   /**
-   * Коллекция деревьев навигации, может ббыть использована для смены заданной навигации
+   * Коллекция деревьев навигации, может быть использована для смены заданной навигации
    * через метод setActiveTree
    */
   public trees: Record<string, TreeRoutes> = {};
@@ -103,14 +104,13 @@ export class Navigator {
    */
   private tree: TreeRoutes;
 
-  private browserSessionId: string;
-
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
 
   constructor(routes?: NavigatorRoute[], config?: NavigatorConfig) {
     this.routes = routes || [];
     this.config = { ...defaultConfig, ...config };
+    console.log('ROUTER', this);
     /**
      * Установка логгера ошибок из объекта конфигурации
      */
@@ -131,9 +131,13 @@ export class Navigator {
 
   /**
    * Метод жизненного цикла роутера - инициализирует начальное состояние роутера до старта
-   * и задает fallback сосотяние по умолчанию, на которое можно перейти в случае ошибки.
+   * и задает fallback состояние по умолчанию, на которое можно перейти в случае ошибки.
    */
   private readonly initialize = () => {
+    if (window.history.state?.fakeEntry) {
+      window.history.back();
+    }
+
     const firstRouteName = (this.routes[0] || {}).name;
     const page = this.config.defaultRoute || firstRouteName;
 
@@ -146,7 +150,6 @@ export class Navigator {
      * собираем начальное состояние из URL
      */
     const initState = this.buildState(browser.getLocation(this.config));
-    this.browserSessionId = uniqueBrowserSessionId();
     this.setState(initState);
   };
 
@@ -173,7 +176,9 @@ export class Navigator {
     if (page !== rootPage) {
       const { newState: rootPageState } = this.makeState(rootPage);
       this.history.push(rootPageState);
-      this.updateUrl(rootPageState);
+      if (this.config.fillStackToBrowser) {
+        this.updateUrl(rootPageState);
+      }
     }
     /**
      * Заполняем стек для остальных страниц, если не задан rootPage,
@@ -191,8 +196,12 @@ export class Navigator {
       };
 
       this.history.push(state);
-      this.updateUrl(state);
+      if (this.config.fillStackToBrowser) {
+        this.updateUrl(state);
+      }
     }
+
+    this.stackPointer = this.history.length - 1;
   };
 
   /**
@@ -201,20 +210,14 @@ export class Navigator {
    * заменяются на первое вхождение в историю через history.replaceState
    */
   private readonly onPopState = (event: PopStateEvent) => {
-    const pointer = event.state?.counter;
+    const { counter, ...browserState } = event.state || {};
     const [rootState] = this.history;
-    const pointedState = this.history[pointer];
+    const pointedState = this.history[counter] || browserState;
     const nextState = pointedState || rootState;
-    const isSameSession =
-      event.state?.browserSessionId === this.browserSessionId;
-    /**
-     * Заменяем текущее состояние если идем обратно.
-     * Если страницы нет в стеке - заменяем на rootState
-     * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
-     */
-    if (pointer !== undefined && isSameSession) {
+    this.stackPointer = counter;
+    if (counter !== undefined) {
       this.replaceState(nextState);
-    } else if (!isSameSession || !pointedState) {
+    } else if (!pointedState) {
       this.replaceState(rootState);
       this.updateUrl({ ...rootState, counter: 0 }, { replace: true });
     }
@@ -326,22 +329,23 @@ export class Navigator {
    */
   private readonly buildState = (url: string) => {
     const path = urlToPath(url, this.config);
-    const { p: page, m: modal = null, ...params } = getQueryParams(path);
+    const { p: page, m: modal = null, ...routeParams } = getQueryParams(path);
     const RouteNode = this.tree.getRouteNode(page);
 
     let State: NavigatorState = this.defaultState;
+    let params = routeParams || {};
+    
+    if (RouteNode.decodeParams) {
+      params = RouteNode.decodeParams(params);
+    }
+
     if (RouteNode) {
       State = {
         page,
         modal,
-        params: params || {},
+        params,
       };
     }
-
-    // if (!State.page) {
-    //   this.errorLogger(ERROR_HAS_TO_BE_ROUTE);
-    //   return this.defaultState;
-    // }
 
     return State;
   };
@@ -402,21 +406,34 @@ export class Navigator {
   /**
    * Метод создания ссылки на основе имени роута и параметров.
    * */
-  public buildUrl = (
+  public buildSearch = (
     routeName: string,
     params: NavigatorParams = {}
-  ): string => {
-    const { newState: state } = this.makeState(routeName, params);
+  ) => {
+    const { newState: state, encodeParams } = this.makeState(routeName, params);
     const { page, modal, params: stateParams } = state;
+    let paramsToUrl = stateParams;
+    
+    if (encodeParams) {
+      paramsToUrl = encodeParams(stateParams);
+    }
+    
     const stateToUrl = {
       p: page,
       m: modal,
-      ...stateParams,
+      ...paramsToUrl,
     };
+
     const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
     return `${this.config.base}${search}`;
-  };
+  }
+
+
+  public buildUrl = (
+    routeName: string,
+    params: NavigatorParams = {}
+  ): string => this.buildSearch(routeName, params);
 
   /**
    * Метод создания ссылки на основе имени роута и параметров.
@@ -424,18 +441,7 @@ export class Navigator {
   public buildPath = (
     routeName: string,
     params: NavigatorParams = {}
-  ): string => {
-    const { newState: state } = this.makeState(routeName, params);
-    const { page, modal, params: stateParams } = state;
-    const stateToUrl = {
-      p: page,
-      m: modal,
-      ...stateParams,
-    };
-    const buildedSearch = buildQueryParams(stateToUrl);
-    const search = buildedSearch.length ? '?' + buildedSearch : '';
-    return `${this.config.base}${search}`;
-  };
+  ): string => this.buildSearch(routeName, params);
 
   /**
    * Метод получения коллекции активных узлов,
@@ -450,10 +456,8 @@ export class Navigator {
       while (stack.length) {
         const node = stack.shift();
         activeNodes.push(node);
-        if (node.parent) {
-          if (node.parent.name) {
-            stack.push(node.parent);
-          }
+        if (node.parent?.name) {
+          stack.push(node.parent);
         }
       }
     }
@@ -564,6 +568,9 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
+    if (!this.isStarted) {
+      this.errorLogger(ERROR_ROUTER_NOT_STARTED);
+    }    
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
       routeParams
@@ -576,15 +583,22 @@ export class Navigator {
     if (options.firstLoad) {
       const currentHistoryState = this.history[historyLength - 1];
       const sameState = deepEqual(currentHistoryState, newState);
-      if (sameState) {return;}
+      if (sameState) {
+        return;
+      }
     }
 
-    if (isBack) {
+    if (options.replace) {
+      this.history.pop();
+      this.history.push(newState);
+    } else if (isBack) {
       this.history.pop();
     } else {
       this.history.push(newState);
     }
 
+    this.stackPointer = this.history.length - 1;
+    
     if (decodeParams) {
       newState.params = decodeParams(newState.params);
     }
@@ -600,6 +614,9 @@ export class Navigator {
     if (routeData && routeData.updateUrl !== false) {
       this.updateUrl(newState, options);
     } else {
+      /**
+       * помечаем фейковое вхождение
+       */
       this.updateUrl(prevState, { fakeEntry: true });
     }
 
@@ -616,23 +633,25 @@ export class Navigator {
     opts: NavigatorOptions = {},
     title = ''
   ) => {
-    const counter = this.history.length - 1;
     let stateToHistory: Record<string, any> = {
       ...state,
-      browserSessionId: this.browserSessionId,
-      counter,
+      counter: this.history.length - 1,
     };
 
     if (opts.replace) {
       stateToHistory = {
         ...state,
-        counter: state.counter ?? counter,
-        browserSessionId: this.browserSessionId,
+        counter: state.counter ?? this.history.length - 1,
       };
     }
 
     if (opts.fakeEntry) {
       const currentUrl = browser.getLocation(this.config);
+      stateToHistory = {
+        ...state,
+        counter: state.counter ?? this.history.length - 1,
+        fakeEntry: true,
+      }
       browser.pushState(stateToHistory, title, currentUrl);
       return;
     }
@@ -648,8 +667,7 @@ export class Navigator {
 
     const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
-    const location = browser.getLocation(this.config, search);
-    const url = `${location}${this.config.base}`;
+    const url = browser.getLocation(this.config, search);
 
     if (opts.replace) {
       browser.replaceState(stateToHistory, title, url);
@@ -659,10 +677,42 @@ export class Navigator {
   };
 
   /**
+   * указатель в стеке роутера
+   */
+  private stackPointer = 0;
+
+  /**
    * Метод навигации назад
-   * */
+   * */    
   public back: VoidFunction = () => {
-    window.history.back();
+    const browserStackLen = window.history.length;
+    console.log('stack pointer', {
+      browserStackLen,
+      pointer: this.stackPointer - 1,
+      prevState: this.history[this.stackPointer - 1],
+    });
+    if (browserStackLen > 2) {
+      window.history.back();
+    } else {
+      const [rootState] = this.history;
+      const prevState = this.history[this.stackPointer - 1] || rootState;  
+      this.replaceState(prevState);
+      this.updateUrl(prevState, { replace: true });
+    }
+  };
+
+  public forward: VoidFunction = () => {
+    const browserStackLen = window.history.length;
+    const routerStackLen = this.history.length;
+  
+    if (browserStackLen >= routerStackLen) {
+      window.history.forward();
+    } else {
+      const nextRecord = this.history[this.stackPointer + 1];
+      if (nextRecord) {  
+        this.updateUrl(nextRecord, { replace: true });
+      }
+    }
   };
 
   /**
@@ -705,10 +755,7 @@ export class Navigator {
      * обработка случая если роуты отсутствуют.
      */
     if (initState && initState.page) {
-      const routeName = initState.modal || initState.page;
-      const params = initState.params;
-
-      this.go(routeName, params, { firstLoad: true });
+      return;
     } else if (startRoute) {
       this.go(startRoute, params, opts);
     } else {
@@ -737,23 +784,20 @@ export class Navigator {
    * Метод возвращает текущее состояние роутера.
    * */
   public getState: NavigatorGetState = () => {
-    const state = { ...this.state };
-    return state;
+    return { ...this.state };
   };
 
   /**
    * Метод возвращает предыдущее состояние роутера.
    * */
   public getPrevState: NavigatorGetState = () => {
-    const state = { ...this.prevState };
-    return state;
+    return { ...this.prevState };
   };
 
   /**
    * Утилита роутера, возвращает булево значение
    * является ли переданный роут с параметрами активным в данном состоянии роутера.
    * */
-
   public isActive = (
     routeName: string,
     routeParams?: NavigatorParams,

@@ -1,10 +1,13 @@
 {
   "name": "@vkontakte/router",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "VK Web Router",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
   "repository": "https://github.com/VKCOM/vk-router",
+  "files": [
+    "dist"
+  ],
   "author": "VK Team <https://vk.com/team>",
   "scripts": {
     "clear": "rm -rf dist",

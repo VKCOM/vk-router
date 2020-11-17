@@ -110,7 +110,6 @@ export class Navigator {
   constructor(routes?: NavigatorRoute[], config?: NavigatorConfig) {
     this.routes = routes || [];
     this.config = { ...defaultConfig, ...config };
-    console.log('ROUTER', this);
     /**
      * Установка логгера ошибок из объекта конфигурации
      */
@@ -686,16 +685,13 @@ export class Navigator {
    * */    
   public back: VoidFunction = () => {
     const browserStackLen = window.history.length;
-    console.log('stack pointer', {
-      browserStackLen,
-      pointer: this.stackPointer - 1,
-      prevState: this.history[this.stackPointer - 1],
-    });
+  
     if (browserStackLen > 2) {
       window.history.back();
     } else {
       const [rootState] = this.history;
-      const prevState = this.history[this.stackPointer - 1] || rootState;  
+      this.stackPointer--;
+      const prevState = this.history[this.stackPointer] || rootState;  
       this.replaceState(prevState);
       this.updateUrl(prevState, { replace: true });
     }
@@ -708,7 +704,8 @@ export class Navigator {
     if (browserStackLen >= routerStackLen) {
       window.history.forward();
     } else {
-      const nextRecord = this.history[this.stackPointer + 1];
+      this.stackPointer++;
+      const nextRecord = this.history[this.stackPointer];
       if (nextRecord) {  
         this.updateUrl(nextRecord, { replace: true });
       }

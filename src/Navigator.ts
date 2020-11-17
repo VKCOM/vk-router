@@ -334,11 +334,12 @@ export class Navigator {
     let State: NavigatorState = this.defaultState;
     let params = routeParams || {};
     
-    if (RouteNode.decodeParams) {
-      params = RouteNode.decodeParams(params);
-    }
-
+    
     if (RouteNode) {
+      if (RouteNode.decodeParams) {
+        params = RouteNode.decodeParams(params);
+      }
+  
       State = {
         page,
         modal,

@@ -326,15 +326,20 @@ export class Navigator {
    */
   private readonly buildState = (url: string) => {
     const path = urlToPath(url, this.config);
-    const { p: page, m: modal = null, ...params } = getQueryParams(path);
+    const { p: page, m: modal = null, ...routeParams } = getQueryParams(path);
     const RouteNode = this.tree.getRouteNode(page);
 
     let State: NavigatorState = this.defaultState;
+    let params = routeParams;
     if (RouteNode) {
+      if (RouteNode.decodeParams) {
+        params = RouteNode.decodeParams(routeParams);
+      }
+
       State = {
         page,
         modal,
-        params: params || {},
+        params,
       };
     }
 
@@ -402,21 +407,32 @@ export class Navigator {
   /**
    * Метод создания ссылки на основе имени роута и параметров.
    * */
-  public buildUrl = (
+  public buildSearch = (
     routeName: string,
     params: NavigatorParams = {}
   ): string => {
-    const { newState: state } = this.makeState(routeName, params);
+    const { newState: state, encodeParams } = this.makeState(routeName, params);
     const { page, modal, params: stateParams } = state;
+    let toStateParams = stateParams;
+
+    if (encodeParams) {
+      toStateParams = encodeParams(stateParams);
+    }
+
     const stateToUrl = {
       p: page,
       m: modal,
-      ...stateParams,
+      ...toStateParams,
     };
     const buildedSearch = buildQueryParams(stateToUrl);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
     return `${this.config.base}${search}`;
   };
+
+  public buildUrl = (
+    routeName: string,
+    params: NavigatorParams = {}
+  ): string => this.buildSearch(routeName, params);
 
   /**
    * Метод создания ссылки на основе имени роута и параметров.
@@ -424,18 +440,7 @@ export class Navigator {
   public buildPath = (
     routeName: string,
     params: NavigatorParams = {}
-  ): string => {
-    const { newState: state } = this.makeState(routeName, params);
-    const { page, modal, params: stateParams } = state;
-    const stateToUrl = {
-      p: page,
-      m: modal,
-      ...stateParams,
-    };
-    const buildedSearch = buildQueryParams(stateToUrl);
-    const search = buildedSearch.length ? '?' + buildedSearch : '';
-    return `${this.config.base}${search}`;
-  };
+  ): string => this.buildSearch(routeName, params);
 
   /**
    * Метод получения коллекции активных узлов,

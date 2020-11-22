@@ -575,13 +575,13 @@ export class Navigator {
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
-
+    const currentHistoryState = this.history[historyLength - 1];
+    const sameState = deepEqual(currentHistoryState, newState);
     const isBack = deepEqual(prevHistoryState, newState);
 
-    if (options.firstLoad) {
-      const currentHistoryState = this.history[historyLength - 1];
-      const sameState = deepEqual(currentHistoryState, newState);
-      if (sameState) {return;}
+    if (sameState) {
+      this.broadCastState();
+      return;
     }
 
     if (isBack) {

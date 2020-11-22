@@ -742,16 +742,14 @@ export class Navigator {
    * Метод возвращает текущее состояние роутера.
    * */
   public getState: NavigatorGetState = () => {
-    const state = { ...this.state };
-    return state;
+    return this.state;
   };
 
   /**
    * Метод возвращает предыдущее состояние роутера.
    * */
   public getPrevState: NavigatorGetState = () => {
-    const state = { ...this.prevState };
-    return state;
+    return this.prevState;
   };
 
   /**

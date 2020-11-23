@@ -127,7 +127,6 @@ export class Navigator {
      * Выполнение этапа инициализации начального состояния роутера
      */
     this.initialize();
-    console.log('router', this);
   }
 
   /**
@@ -595,8 +594,8 @@ export class Navigator {
 
     const areSameParams = deepEqual(this.state.params, newState.params);
     /**
-     * Для отработки хуков которые зависят от того обновился объект параметров или нет
-     * сохраняем ссылку на объект параметров предыдущего стейта
+     * Для отработки хуков которые зависят от того, обновился объект параметров или нет
+     * сохраняем ссылку на объект параметров предыдущего стейта если параметры не изменились
      */
     if (areSameParams) {
       newState.params = this.state.params;

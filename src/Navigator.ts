@@ -577,7 +577,7 @@ export class Navigator {
     const prevHistoryState = this.history[historyLength - 2];
     const sameState = deepEqual(this.state, newState);
     const isBack = deepEqual(prevHistoryState, newState);
-    if (sameState) {
+    if (sameState && !options.firstLoad) {
       this.broadCastState();
       return;
     }

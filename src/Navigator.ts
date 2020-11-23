@@ -575,13 +575,11 @@ export class Navigator {
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
-
+    const sameState = deepEqual(this.state, newState);
     const isBack = deepEqual(prevHistoryState, newState);
-
-    if (options.firstLoad) {
-      const currentHistoryState = this.history[historyLength - 1];
-      const sameState = deepEqual(currentHistoryState, newState);
-      if (sameState) {return;}
+    if (sameState) {
+      this.broadCastState();
+      return;
     }
 
     if (isBack) {
@@ -742,16 +740,14 @@ export class Navigator {
    * Метод возвращает текущее состояние роутера.
    * */
   public getState: NavigatorGetState = () => {
-    const state = { ...this.state };
-    return state;
+    return this.state;
   };
 
   /**
    * Метод возвращает предыдущее состояние роутера.
    * */
   public getPrevState: NavigatorGetState = () => {
-    const state = { ...this.prevState };
-    return state;
+    return this.prevState;
   };
 
   /**

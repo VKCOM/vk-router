@@ -21,6 +21,8 @@ import {
   NavigatorRouteHandlerCollection,
   NavigatorErrorLogger,
   NavigatorDone,
+  NavigatorMeta,
+  NavigatorStateSource,
 } from './types';
 
 import {
@@ -141,6 +143,9 @@ export class Navigator {
       page,
       modal: null,
       params: {},
+      meta: {
+        source: 'default',
+      },
     };
     /**
      * собираем начальное состояние из URL
@@ -188,6 +193,9 @@ export class Navigator {
         page: node.name,
         modal: null,
         params: this.getActiveParams([node], params),
+        meta: {
+          source: 'popstate',
+        },
       };
 
       this.history.push(state);
@@ -213,9 +221,15 @@ export class Navigator {
      * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
      */
     if (pointer !== undefined && isSameSession) {
-      this.replaceState(nextState);
+      this.replaceState({
+        ...nextState,
+        meta: { source: 'popstate' },
+      });
     } else if (!isSameSession || !pointedState) {
-      this.replaceState(rootState);
+      this.replaceState({
+        ...rootState,
+        meta: { source: 'popstate' },
+      });
       this.updateUrl({ ...rootState, counter: 0 }, { replace: true });
     }
   };
@@ -340,6 +354,9 @@ export class Navigator {
         page,
         modal,
         params,
+        meta: {
+          source: 'url',
+        },
       };
     }
 
@@ -516,7 +533,8 @@ export class Navigator {
    * */
   private readonly makeState = (
     routeName: string,
-    routeParams: NavigatorParams = {}
+    routeParams: NavigatorParams = {},
+    stateSource?: NavigatorStateSource,
   ) => {
     const prevState = this.getState();
     const routeNode: RouteNode = this.tree.getRouteNode(routeName);
@@ -527,6 +545,8 @@ export class Navigator {
     const activeNodes = this.getActiveNodes(routeName);
 
     let params: NavigatorParams = { ...routeParams };
+
+    const meta: NavigatorMeta = { source: stateSource || 'default' };
 
     if (routeNode?.parent?.name) {
       const activeParams: Record<string, any> = this.getActiveParams(
@@ -544,6 +564,7 @@ export class Navigator {
       page: routeName,
       modal: null,
       params,
+      meta,
     };
 
     if (routeNode?.data?.[subRouteKey]) {
@@ -571,7 +592,8 @@ export class Navigator {
   ) => {
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
-      routeParams
+      routeParams,
+      'go'
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];

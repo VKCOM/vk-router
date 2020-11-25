@@ -71,7 +71,7 @@ export interface NavigatorState {
   params: NavigatorParams;
   counter?: number;
   activeNodes?: RouteNode[];
-  meta?: NavigatorMeta;
+  meta: NavigatorMeta;
 }
 
 export interface NavigatorStatesToSubscriber {

@@ -176,7 +176,7 @@ export class Navigator {
      * если мы не на рутовой странице то:
      */
     if (page !== rootPage) {
-      const { newState: rootPageState } = this.makeState(rootPage);
+      const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
       this.history.push(rootPageState);
       this.updateUrl(rootPageState);
     }
@@ -538,15 +538,14 @@ export class Navigator {
   ) => {
     const prevState = this.getState();
     const routeNode: RouteNode = this.tree.getRouteNode(routeName);
+    const { subRouteKey } = this.config;
 
     const { data: routeData, decodeParams, encodeParams } = routeNode;
-    const { subRouteKey } = this.config;
 
     const activeNodes = this.getActiveNodes(routeName);
 
-    let params: NavigatorParams = { ...routeParams };
-
     const meta: NavigatorMeta = { source: stateSource || 'default' };
+    let params: NavigatorParams = { ...routeParams };
 
     if (routeNode?.parent?.name) {
       const activeParams: Record<string, any> = this.getActiveParams(
@@ -574,6 +573,7 @@ export class Navigator {
           ...prevState.params,
           ...routeParams,
         },
+        meta,
         modal: routeNode.name,
       };
     }
@@ -792,7 +792,7 @@ export class Navigator {
     strictCompare = true, // строгое сравнение со всеми параметрами
     ignoreQueryParams = false // игнорирование необязятельных query параметров,
   ) => {
-    const state = this.getState({ withoutHistory: true });
+    const state = this.getState();
     const activeStateParams = state.params;
     const activeRouteNodes = this.getActiveNodes(state.page);
     const acitveModalNodes = this.getActiveNodes(state.modal);
@@ -813,7 +813,8 @@ export class Navigator {
 
     const { newState: compareState } = this.makeState(
       routeName,
-      compareRouteParams
+      compareRouteParams,
+      state.meta.source, // чтобы создавать корректный стейт для сравнения
     );
 
     const areSameStates = deepEqual(state, compareState);

@@ -21,6 +21,8 @@ import {
   NavigatorRouteHandlerCollection,
   NavigatorErrorLogger,
   NavigatorDone,
+  NavigatorMeta,
+  NavigatorStateSource,
 } from './types';
 
 import {
@@ -141,6 +143,9 @@ export class Navigator {
       page,
       modal: null,
       params: {},
+      meta: {
+        source: 'default',
+      },
     };
     /**
      * собираем начальное состояние из URL
@@ -171,7 +176,7 @@ export class Navigator {
      * если мы не на рутовой странице то:
      */
     if (page !== rootPage) {
-      const { newState: rootPageState } = this.makeState(rootPage);
+      const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
       this.history.push(rootPageState);
       this.updateUrl(rootPageState);
     }
@@ -188,6 +193,9 @@ export class Navigator {
         page: node.name,
         modal: null,
         params: this.getActiveParams([node], params),
+        meta: {
+          source: 'popstate',
+        },
       };
 
       this.history.push(state);
@@ -213,9 +221,15 @@ export class Navigator {
      * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
      */
     if (pointer !== undefined && isSameSession) {
-      this.replaceState(nextState);
+      this.replaceState({
+        ...nextState,
+        meta: { source: 'popstate' },
+      });
     } else if (!isSameSession || !pointedState) {
-      this.replaceState(rootState);
+      this.replaceState({
+        ...rootState,
+        meta: { source: 'popstate' },
+      });
       this.updateUrl({ ...rootState, counter: 0 }, { replace: true });
     }
   };
@@ -340,6 +354,9 @@ export class Navigator {
         page,
         modal,
         params,
+        meta: {
+          source: 'url',
+        },
       };
     }
 
@@ -516,16 +533,18 @@ export class Navigator {
    * */
   private readonly makeState = (
     routeName: string,
-    routeParams: NavigatorParams = {}
+    routeParams: NavigatorParams = {},
+    stateSource?: NavigatorStateSource,
   ) => {
     const prevState = this.getState();
     const routeNode: RouteNode = this.tree.getRouteNode(routeName);
+    const { subRouteKey } = this.config;
 
     const { data: routeData, decodeParams, encodeParams } = routeNode;
-    const { subRouteKey } = this.config;
 
     const activeNodes = this.getActiveNodes(routeName);
 
+    const meta: NavigatorMeta = { source: stateSource || 'default' };
     let params: NavigatorParams = { ...routeParams };
 
     if (routeNode?.parent?.name) {
@@ -544,6 +563,7 @@ export class Navigator {
       page: routeName,
       modal: null,
       params,
+      meta,
     };
 
     if (routeNode?.data?.[subRouteKey]) {
@@ -553,6 +573,7 @@ export class Navigator {
           ...prevState.params,
           ...routeParams,
         },
+        meta,
         modal: routeNode.name,
       };
     }
@@ -571,7 +592,8 @@ export class Navigator {
   ) => {
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
-      routeParams
+      routeParams,
+      'go'
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
@@ -770,7 +792,7 @@ export class Navigator {
     strictCompare = true, // строгое сравнение со всеми параметрами
     ignoreQueryParams = false // игнорирование необязятельных query параметров,
   ) => {
-    const state = this.getState({ withoutHistory: true });
+    const state = this.getState();
     const activeStateParams = state.params;
     const activeRouteNodes = this.getActiveNodes(state.page);
     const acitveModalNodes = this.getActiveNodes(state.modal);
@@ -791,7 +813,8 @@ export class Navigator {
 
     const { newState: compareState } = this.makeState(
       routeName,
-      compareRouteParams
+      compareRouteParams,
+      state.meta.source, // чтобы создавать корректный стейт для сравнения
     );
 
     const areSameStates = deepEqual(state, compareState);

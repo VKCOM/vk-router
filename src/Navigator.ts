@@ -6,6 +6,7 @@ import {
   deepEqual,
   hasProperties,
   cleanFields,
+  uniqueBrowserSessionId,
 } from './utils';
 import {
   NavigatorRoute,
@@ -20,6 +21,8 @@ import {
   NavigatorRouteHandlerCollection,
   NavigatorErrorLogger,
   NavigatorDone,
+  NavigatorMeta,
+  NavigatorStateSource,
 } from './types';
 
 import {
@@ -46,8 +49,7 @@ const defaultConfig: NavigatorConfig = {
   rootPage: undefined,
   preserveHash: false,
   preservePath: true,
-  fillStackToBrowser: false,
-  useBrowserStack: false,
+  fillStackToBrowser: true,
 };
 
 /**
@@ -103,6 +105,14 @@ export class Navigator {
    * Текущее активное дерево
    */
   private tree: TreeRoutes;
+  /**
+   * указатель в стеке роутера
+   */
+  private stackPointer = 0;
+  /**
+   * id cессии вкладки
+   */
+  private uniqueBrowserSessionId: string = '';
 
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
@@ -144,12 +154,16 @@ export class Navigator {
       page,
       modal: null,
       params: {},
+      meta: {
+        source: 'default',
+      },
     };
     /**
      * собираем начальное состояние из URL
      */
     const initState = this.buildState(browser.getLocation(this.config));
     this.setState(initState);
+    this.uniqueBrowserSessionId = uniqueBrowserSessionId();
   };
 
   /**
@@ -173,8 +187,9 @@ export class Navigator {
      * если мы не на рутовой странице то:
      */
     if (page !== rootPage) {
-      const { newState: rootPageState } = this.makeState(rootPage);
+      const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
       this.history.push(rootPageState);
+
       if (this.config.fillStackToBrowser) {
         this.updateUrl(rootPageState);
       }
@@ -188,13 +203,17 @@ export class Navigator {
     while (stack.length) {
       const node = stack.shift();
 
-      const state: NavigatorState = {
+      const state: NavigatorState = { 
         page: node.name,
         modal: null,
         params: this.getActiveParams([node], params),
+        meta: {
+          source: 'popstate',
+        },
       };
 
       this.history.push(state);
+
       if (this.config.fillStackToBrowser) {
         this.updateUrl(state);
       }
@@ -211,14 +230,44 @@ export class Navigator {
   private readonly onPopState = (event: PopStateEvent) => {
     const { counter, ...browserState } = event.state || {};
     const [rootState] = this.history;
+  
     const pointedState = this.history[counter] || browserState;
     const nextState = pointedState || rootState;
+  
     this.stackPointer = counter;
-    if (counter !== undefined) {
-      this.replaceState(nextState);
-    } else if (!pointedState) {
-      this.replaceState(rootState);
-      this.updateUrl({ ...rootState, counter: 0 }, { replace: true });
+
+    if ( this.config.fillStackToBrowser) {
+      if (counter !== undefined) {
+        this.replaceState({
+          ...nextState,
+          meta: { source: 'popstate' },
+        });
+      } else if (!pointedState) {
+        this.replaceState({
+          ...rootState,
+          meta: { source: 'popstate' },
+        });
+      } 
+    } else {
+      const isSameSession =
+        event.state?.browserSessionId === this.uniqueBrowserSessionId;
+      /**
+       * Заменяем текущее состояние если идем обратно.
+       * Если страницы нет в стеке - заменяем на rootState
+       * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
+       */
+      if (this.stackPointer !== undefined && isSameSession) {
+        this.replaceState({
+          ...nextState,
+          meta: { source: 'popstate' },
+        });
+      } else if (!isSameSession || !pointedState) {
+        this.replaceState({
+          ...rootState,
+          meta: { source: 'popstate' },
+        });
+        this.updateUrl({ ...rootState, counter: 0 }, { replace: true });
+      }
     }
   };
 
@@ -332,18 +381,19 @@ export class Navigator {
     const RouteNode = this.tree.getRouteNode(page);
 
     let State: NavigatorState = this.defaultState;
-    let params = routeParams || {};
-    
-    
+    let params = routeParams;
     if (RouteNode) {
       if (RouteNode.decodeParams) {
-        params = RouteNode.decodeParams(params);
+        params = RouteNode.decodeParams(routeParams);
       }
-  
+
       State = {
         page,
         modal,
         params,
+        meta: {
+          source: 'url',
+        },
       };
     }
 
@@ -409,19 +459,19 @@ export class Navigator {
   public buildSearch = (
     routeName: string,
     params: NavigatorParams = {}
-  ) => {
+  ): string => {
     const { newState: state, encodeParams } = this.makeState(routeName, params);
     const { page, modal, params: stateParams } = state;
-    let paramsToUrl = stateParams;
-    
+    let toStateParams = stateParams;
+
     if (encodeParams) {
-      paramsToUrl = encodeParams(stateParams);
+      toStateParams = encodeParams(stateParams);
     }
-    
+
     const stateToUrl = {
       p: page,
       m: modal,
-      ...paramsToUrl,
+      ...toStateParams,
     };
 
     const buildedSearch = buildQueryParams(stateToUrl);
@@ -515,16 +565,18 @@ export class Navigator {
    * */
   private readonly makeState = (
     routeName: string,
-    routeParams: NavigatorParams = {}
+    routeParams: NavigatorParams = {},
+    stateSource?: NavigatorStateSource,
   ) => {
     const prevState = this.getState();
     const routeNode: RouteNode = this.tree.getRouteNode(routeName);
+    const { subRouteKey } = this.config;
 
     const { data: routeData, decodeParams, encodeParams } = routeNode;
-    const { subRouteKey } = this.config;
 
     const activeNodes = this.getActiveNodes(routeName);
 
+    const meta: NavigatorMeta = { source: stateSource || 'default' };
     let params: NavigatorParams = { ...routeParams };
 
     if (routeNode?.parent?.name) {
@@ -543,6 +595,7 @@ export class Navigator {
       page: routeName,
       modal: null,
       params,
+      meta,
     };
 
     if (routeNode?.data?.[subRouteKey]) {
@@ -552,6 +605,7 @@ export class Navigator {
           ...prevState.params,
           ...routeParams,
         },
+        meta,
         modal: routeNode.name,
       };
     }
@@ -573,19 +627,16 @@ export class Navigator {
     }    
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
-      routeParams
+      routeParams,
+      'go'
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
-
+    const sameState = deepEqual(this.state, newState);
     const isBack = deepEqual(prevHistoryState, newState);
-
-    if (options.firstLoad) {
-      const currentHistoryState = this.history[historyLength - 1];
-      const sameState = deepEqual(currentHistoryState, newState);
-      if (sameState) {
-        return;
-      }
+    if (sameState && !options.firstLoad) {
+      this.broadCastState();
+      return;
     }
 
     if (options.replace) {
@@ -603,6 +654,15 @@ export class Navigator {
       newState.params = decodeParams(newState.params);
     }
 
+    const areSameParams = deepEqual(this.state.params, newState.params);
+    /**
+     * Для отработки хуков которые зависят от того, обновился объект параметров или нет
+     * сохраняем ссылку на объект параметров предыдущего стейта если параметры не изменились
+     */
+    if (areSameParams) {
+      newState.params = this.state.params;
+    }
+
     this.setState(newState);
 
     const prevState = this.getPrevState();
@@ -611,7 +671,7 @@ export class Navigator {
       newState.params = encodeParams(newState.params);
     }
 
-    if (routeData && routeData.updateUrl !== false) {
+    if (routeData?.updateUrl !== false) {
       this.updateUrl(newState, options);
     } else {
       /**
@@ -633,15 +693,16 @@ export class Navigator {
     opts: NavigatorOptions = {},
     title = ''
   ) => {
+    const lastHistoryIndex = this.history.length - 1;
     let stateToHistory: Record<string, any> = {
       ...state,
-      counter: this.history.length - 1,
+      counter: lastHistoryIndex,
     };
 
     if (opts.replace) {
       stateToHistory = {
         ...state,
-        counter: state.counter ?? this.history.length - 1,
+        counter: state.counter ?? lastHistoryIndex,
       };
     }
 
@@ -649,7 +710,7 @@ export class Navigator {
       const currentUrl = browser.getLocation(this.config);
       stateToHistory = {
         ...state,
-        counter: state.counter ?? this.history.length - 1,
+        counter: state.counter ?? lastHistoryIndex,
         fakeEntry: true,
       }
       browser.pushState(stateToHistory, title, currentUrl);
@@ -677,11 +738,6 @@ export class Navigator {
   };
 
   /**
-   * указатель в стеке роутера
-   */
-  private stackPointer = 0;
-
-  /**
    * Метод навигации назад
    * */    
   public back: VoidFunction = () => {
@@ -691,7 +747,9 @@ export class Navigator {
       window.history.back();
     } else {
       const [rootState] = this.history;
+
       this.stackPointer--;
+
       const prevState = this.history[this.stackPointer] || rootState;  
       this.replaceState(prevState);
       this.updateUrl(prevState, { replace: true });
@@ -705,7 +763,9 @@ export class Navigator {
     if (browserStackLen >= routerStackLen) {
       window.history.forward();
     } else {
+      
       this.stackPointer++;
+
       const nextRecord = this.history[this.stackPointer];
       if (nextRecord) {  
         this.updateUrl(nextRecord, { replace: true });
@@ -782,14 +842,14 @@ export class Navigator {
    * Метод возвращает текущее состояние роутера.
    * */
   public getState: NavigatorGetState = () => {
-    return { ...this.state };
+    return this.state;
   };
 
   /**
    * Метод возвращает предыдущее состояние роутера.
    * */
   public getPrevState: NavigatorGetState = () => {
-    return { ...this.prevState };
+    return this.prevState;
   };
 
   /**
@@ -802,7 +862,7 @@ export class Navigator {
     strictCompare = true, // строгое сравнение со всеми параметрами
     ignoreQueryParams = false // игнорирование необязятельных query параметров,
   ) => {
-    const state = this.getState({ withoutHistory: true });
+    const state = this.getState();
     const activeStateParams = state.params;
     const activeRouteNodes = this.getActiveNodes(state.page);
     const acitveModalNodes = this.getActiveNodes(state.modal);
@@ -823,7 +883,8 @@ export class Navigator {
 
     const { newState: compareState } = this.makeState(
       routeName,
-      compareRouteParams
+      compareRouteParams,
+      state?.meta?.source, // чтобы создавать корректный стейт для сравнения
     );
 
     const areSameStates = deepEqual(state, compareState);

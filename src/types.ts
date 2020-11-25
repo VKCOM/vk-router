@@ -59,6 +59,13 @@ export type NavigatorCreate = (options: NavigatorCreateOptions) => Navigator;
 
 export type NavigatorHistoryRecord = NavigatorState;
 
+export type NavigatorStateSource = 'popstate' | 'go' | 'default' | 'url';
+export interface NavigatorMeta {
+  source: NavigatorStateSource;
+
+  [key: string]: any;
+}
+
 export interface NavigatorState {
   page: string;
   modal?: string;
@@ -66,6 +73,7 @@ export interface NavigatorState {
   params: NavigatorParams;
   counter?: number;
   activeNodes?: RouteNode[];
+  meta: NavigatorMeta;
 }
 
 export interface NavigatorStatesToSubscriber {

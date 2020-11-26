@@ -169,7 +169,8 @@ export class Navigator {
    * в дальнейшем перемещение по истории осуществляется только по внутреннему стеку.
    */
   private readonly buildHistory = () => {
-    const { page, params } = this.getState();
+    const initState = this.getState();
+    const { page, params } = initState;
     const { rootPage } = this.config;
     /**
      * Вхождение в историю для rootPage
@@ -200,6 +201,15 @@ export class Navigator {
 
       this.history.push(state);
       this.updateUrl(state);
+    }
+
+    const lastState = this.history[this.history.length - 1];
+    if (deepEqual(
+      { ...lastState, meta: null },
+      { ...initState, meta: null })
+    ) {
+      this.history.pop();
+      this.updateUrl(initState, { replace: true });
     }
   };
 
@@ -597,7 +607,10 @@ export class Navigator {
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
-    const sameState = deepEqual(this.state, newState);
+    const sameState = deepEqual(
+      { ...this.state, meta: null },
+      { ...newState, meta: null }
+    );
     const isBack = deepEqual(prevHistoryState, newState);
     if (sameState && !options.firstLoad) {
       this.broadCastState();

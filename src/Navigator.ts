@@ -696,12 +696,14 @@ export class Navigator {
     const lastHistoryIndex = this.history.length - 1;
     let stateToHistory: Record<string, any> = {
       ...state,
+      browserSessionId: this.uniqueBrowserSessionId,
       counter: lastHistoryIndex,
     };
 
     if (opts.replace) {
       stateToHistory = {
         ...state,
+        browserSessionId: this.uniqueBrowserSessionId,
         counter: state.counter ?? lastHistoryIndex,
       };
     }
@@ -710,6 +712,7 @@ export class Navigator {
       const currentUrl = browser.getLocation(this.config);
       stateToHistory = {
         ...state,
+        browserSessionId: this.uniqueBrowserSessionId,
         counter: state.counter ?? lastHistoryIndex,
         fakeEntry: true,
       }
@@ -742,8 +745,9 @@ export class Navigator {
    * */    
   public back: VoidFunction = () => {
     const browserStackLen = window.history.length;
-  
-    if (browserStackLen > 2) {
+    if (this.config.fillStackToBrowser) {
+      window.history.back();
+    } else if (browserStackLen > 2) {
       window.history.back();
     } else {
       const [rootState] = this.history;
@@ -760,10 +764,12 @@ export class Navigator {
     const browserStackLen = window.history.length;
     const routerStackLen = this.history.length;
   
-    if (browserStackLen >= routerStackLen) {
+    if (this.config.fillStackToBrowser) {
+      window.history.back();
+    } else if (browserStackLen >= routerStackLen) {
       window.history.forward();
     } else {
-      
+
       this.stackPointer++;
 
       const nextRecord = this.history[this.stackPointer];
@@ -806,21 +812,22 @@ export class Navigator {
     );
     /**
      * Заполнение стека истории до перехода на активный роут
-     */
+     */ 
     this.buildHistory();
     /**
      * Выполнение перехода на начальный роут и добавление записи в историю,
      * обработка случая если роуты отсутствуют.
      */
-    if (initState && initState.page) {
-      return;
+    if (initState?.page) {
+      const { modal, page, params } = initState;
+      this.go(modal || page, params, { firstLoad: true });
     } else if (startRoute) {
       this.go(startRoute, params, opts);
     } else {
       if (defaultRoute) {
         this.go(defaultRoute);
       } else {
-        if (firstRoute && firstRoute.name) {
+        if (firstRoute?.name) {
           this.go(firstRoute.name);
         } else {
           this.errorLogger(ERROR_NO_ROUTES);

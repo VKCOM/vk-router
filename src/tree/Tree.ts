@@ -36,10 +36,6 @@ export default class TreeRoutes {
     this.root = new RouteNode(rootData);
   }
 
-  public contains = (callback: TreeCallback) => {
-    this.traverse(callback);
-  };
-
   public getParentNode = (path: string) => {
     const pathToParent = getParentPath(path);
     const parent = this.getByPath(pathToParent);
@@ -56,7 +52,7 @@ export default class TreeRoutes {
       routeNode instanceof RouteNode ? routeNode : new RouteNode(routeNode);
     let parent: RouteNode = null;
 
-    this.contains((node: RouteNode) => {
+    this.traverse((node: RouteNode) => {
       if (parentNode && node && node.name === parentNode.name) {
         parent = node;
       } else if (!parentNode) {
@@ -83,7 +79,7 @@ export default class TreeRoutes {
 
   private readonly findByName = (nodeName: string) => {
     let resultNode;
-    this.contains((node: RouteNode) => {
+    this.traverse((node: RouteNode) => {
       if (node.name === nodeName) {
         resultNode = node;
       }
@@ -101,7 +97,7 @@ export default class TreeRoutes {
     let childToRemove = null;
     let index;
 
-    this.contains((node: RouteNode) => {
+    this.traverse((node: RouteNode) => {
       if (node.name === routeName) {
         parent = node;
       }
@@ -109,10 +105,10 @@ export default class TreeRoutes {
 
     if (parent) {
       index = this.findIndex(parent.children, routeName);
-      if (index === undefined) {
-        this.errorLogger(ERROR_NODE_TO_REMOVE_NOT_EXIST);
-      } else {
+      if (index !== -1) {
         childToRemove = parent.children.splice(index, 1);
+      } else {
+        this.errorLogger(ERROR_NODE_TO_REMOVE_NOT_EXIST);
       }
     } else {
       this.errorLogger(ERROR_PARENT_DOESNT_EXIST);
@@ -122,17 +118,14 @@ export default class TreeRoutes {
   };
 
   private readonly traverse = (callback: TreeCallback) => {
-    (function recurse(currentNode) {
-      for (
-        let i = 0,
-          length = currentNode.children ? currentNode.children.length : 0;
-        i < length;
-        i++
-      ) {
-        recurse(currentNode.children[i]);
-      }
+    const stack = [this.root];
+    while (stack.length) {
+      const currentNode = stack.shift();
       callback(currentNode);
-    })(this.root);
+      if (currentNode.children) {
+        stack.push(...currentNode.children);
+      }
+    }
   };
 
   public findIndex = (routes: RouteNode[], routeName: string) => {

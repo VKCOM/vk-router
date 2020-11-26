@@ -4,8 +4,7 @@ import RouteNode from './tree/RouteNode';
 export type NavigatorErrorLogger = (errorStr: string) => void;
 
 export interface NavigatorConfig {
-  defaultRoute: string;
-  rootPage: string;
+  defaultRoute?: string;
   defaultParams?: any;
   queryParamsMode?: string;
   base?: string;

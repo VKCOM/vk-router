@@ -42,11 +42,10 @@ import RouteNode from './tree/RouteNode';
  * Объект конфигурации по умолчанию
  */
 const defaultConfig: NavigatorConfig = {
-  defaultRoute: 'default',
+  defaultRoute: '',
   base: '',
   subRouteKey: 'subRoute',
   routeKey: 'route',
-  rootPage: undefined,
   preserveHash: false,
   preservePath: true,
   fillStackToBrowser: true,
@@ -161,17 +160,16 @@ export class Navigator {
     /**
      * собираем начальное состояние из URL
      */
-    const initState = this.buildState(browser.getLocation(this.config));
+    const initState = this.buildState(browser.getLocation(this.config), 'go');
     this.setState(initState);
     this.uniqueBrowserSessionId = uniqueBrowserSessionId();
   };
 
   /**
-   * Метод получения внутреннего стека истории роутера
+   * Метод получения копии внутреннего стека истории роутера
    */
   public getHistory() {
-    const historyStack = [...this.history];
-    return historyStack;
+    return [...this.history];
   }
 
   /**
@@ -180,22 +178,23 @@ export class Navigator {
    * в дальнейшем перемещение по истории осуществляется только по внутреннему стеку.
    */
   private readonly buildHistory = () => {
-    const { page, params } = this.getState();
-    const { rootPage } = this.config;
+    const initState = this.getState();
+    const { page, params } = initState;
+    const { defaultRoute } = this.config;
     /**
-     * Вхождение в историю для rootPage
+     * Вхождение в историю для defaultRoute
      * если мы не на рутовой странице то:
      */
-    if (page !== rootPage) {
-      const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
-      this.history.push(rootPageState);
+    if (page !== defaultRoute) {
+      const { newState: defaultRouteState } = this.makeState(defaultRoute, null, 'default');
+      this.history.push(defaultRouteState);
 
       if (this.config.fillStackToBrowser) {
-        this.updateUrl(rootPageState);
+        this.updateUrl(defaultRouteState);
       }
     }
     /**
-     * Заполняем стек для остальных страниц, если не задан rootPage,
+     * Заполняем стек для остальных страниц, если не задан defaultRoute,
      * то рутовым станет первое вхождение в историю
      */
     const stack = [...this.getActiveNodes(page)];
@@ -208,7 +207,7 @@ export class Navigator {
         modal: null,
         params: this.getActiveParams([node], params),
         meta: {
-          source: 'popstate',
+          source: 'go',
         },
       };
 
@@ -218,7 +217,12 @@ export class Navigator {
         this.updateUrl(state);
       }
     }
-
+  
+    const lastEntry = this.history[this.history.length - 1];
+    if(!deepEqual(lastEntry, initState)) {
+      this.history.push(initState);
+      this.updateUrl(initState);
+    }
     this.stackPointer = this.history.length - 1;
   };
 
@@ -375,7 +379,7 @@ export class Navigator {
    * Метод создания состояния на основе переданного URL в инициализированный роутер,
    * используется для получения начального состояния роутера
    */
-  private readonly buildState = (url: string) => {
+  private readonly buildState = (url: string, source: NavigatorStateSource = 'url') => {
     const path = urlToPath(url, this.config);
     const { p: page, m: modal = null, ...routeParams } = getQueryParams(path);
     const RouteNode = this.tree.getRouteNode(page);
@@ -392,7 +396,7 @@ export class Navigator {
         modal,
         params,
         meta: {
-          source: 'url',
+          source,
         },
       };
     }
@@ -634,7 +638,7 @@ export class Navigator {
     const prevHistoryState = this.history[historyLength - 2];
     const sameState = deepEqual(this.state, newState);
     const isBack = deepEqual(prevHistoryState, newState);
-    if (sameState && !options.firstLoad) {
+    if (sameState) {
       this.broadCastState();
       return;
     }
@@ -818,9 +822,8 @@ export class Navigator {
      * Выполнение перехода на начальный роут и добавление записи в историю,
      * обработка случая если роуты отсутствуют.
      */
-    if (initState?.page) {
-      const { modal, page, params } = initState;
-      this.go(modal || page, params, { firstLoad: true });
+    if(initState) {
+      return;
     } else if (startRoute) {
       this.go(startRoute, params, opts);
     } else {

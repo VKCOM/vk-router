@@ -1,6 +1,6 @@
 {
   "name": "@vkontakte/router",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "VK Web Router",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",
@@ -32,12 +32,10 @@
     "@vkontakte/eslint-config": "^2.5.0",
     "eslint": "^7.13.0"
   },
-  "dependencies": {
-    "@types/react": "^16.9.44",
-    "@types/react-dom": "^16.9.8"
-  },
   "peerDependencies": {
     "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "react-dom": "^16.13.1",
+    "@types/react": "^16.9.44",
+    "@types/react-dom": "^16.9.8"
   }
 }

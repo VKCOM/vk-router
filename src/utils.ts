@@ -1,3 +1,5 @@
+import { NavigatorConfig } from "./types";
+
 export const getTarget = (path: string) =>
   path ? path.split('.').reverse()[0] : '';
 
@@ -86,42 +88,28 @@ export const getUrlParams = (url: string) => {
 
 export const buildQueryParams = (
   queryObj: Record<string, any> | string,
-  nested = ''
+  nested = '',
+  config?: NavigatorConfig
 ) => {
   if (!queryObj || typeof queryObj !== 'object') {
     return '';
   }
+  const escapeFn = config.escape || escape;
 
   const pairs: any[] = Object.entries(queryObj)
     .filter(([, val]) => !!val)
     .map(([key, val]) => {
       if (typeof val === 'object') {
-        return buildQueryParams(val, nested + `${key}.`);
+        return buildQueryParams(val, nested + `${key}.`, config);
       } else {
-        return [nested + key, val].map(escape).join('=');
+        if (config?.escapeParams) {
+          return [nested + key, val].map(escapeFn).join('=');
+        } else {
+          return [nested + key, val].join('=');
+        }
       }
     })
     .filter((el) => el);
-  return pairs.join('&');
-};
-
-// TODO
-export const buildUrlParams = (
-  queryObj: Record<string, any> | string,
-  nested = ''
-) => {
-  if (!queryObj || typeof queryObj !== 'object') {
-    return '';
-  }
-
-  const pairs: any[] = Object.entries(queryObj).map(([key, val]) => {
-    if (typeof val === 'object') {
-      return buildQueryParams(val, nested + `${key}.`);
-    } else {
-      return [nested + key, val].map(escape).join('=');
-    }
-  });
-
   return pairs.join('&');
 };
 

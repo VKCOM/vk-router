@@ -451,7 +451,7 @@ export class Navigator {
       m: modal,
       ...toStateParams,
     };
-    const buildedSearch = buildQueryParams(stateToUrl);
+    const buildedSearch = buildQueryParams(stateToUrl, '', this.config);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
     return `${this.config.base}${search}`;
   };
@@ -693,11 +693,10 @@ export class Navigator {
       stateToUrl.m = state.modal;
     }
 
-    const buildedSearch = buildQueryParams(stateToUrl);
+    const buildedSearch = buildQueryParams(stateToUrl, '', this.config);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
-    const location = browser.getLocation(this.config, search);
-    const url = `${location}${this.config.base}`;
-
+    const url = browser.getLocation(this.config, search);
+    console.log('url', url);
     if (opts.replace) {
       browser.replaceState(stateToHistory, title, url);
     } else {

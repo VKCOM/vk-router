@@ -696,7 +696,6 @@ export class Navigator {
     const buildedSearch = buildQueryParams(stateToUrl, '', this.config);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
     const url = browser.getLocation(this.config, search);
-    console.log('url', url);
     if (opts.replace) {
       browser.replaceState(stateToHistory, title, url);
     } else {

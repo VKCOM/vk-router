@@ -350,7 +350,7 @@ export class Navigator {
    */
   private readonly buildState = (url: string) => {
     const path = urlToPath(url, this.config);
-    const { p: page, m: modal = null, ...routeParams } = getQueryParams(path);
+    const { p: page, m: modal = null, ...routeParams } = getQueryParams(decodeURI(path));
     const RouteNode = this.tree.getRouteNode(page);
 
     let State: NavigatorState = this.defaultState;

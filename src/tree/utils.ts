@@ -50,22 +50,6 @@ export const restoreParams = (params: any) => {
   return restoredParams;
 };
 
-export const buildUrlParams = (queryObj: Record<string, any> | string, nested = '') => {
-  if (!queryObj || typeof queryObj !== 'object') {
-    return '';
-  }
-
-  const pairs: any[] = Object.entries(queryObj).map(([key, val]) => {
-    if (typeof val === 'object') {
-      return buildUrlParams(val, nested + `${key}.`);
-    } else {
-      return [nested + key, val].map(escape).join('=');
-    }
-  });
-
-  return pairs.join('&');
-};
-
 export const buildPathFromDotPath = (path: string) => path ? '/' + path.split('.').join('/') : '';
 
 export const getParentPath = (path: string) => {

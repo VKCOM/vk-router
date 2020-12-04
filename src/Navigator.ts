@@ -224,6 +224,15 @@ export class Navigator {
       this.updateUrl(initState);
     }
     this.stackPointer = this.history.length - 1;
+
+    const lastState = this.history[this.history.length - 1];
+    if (deepEqual(
+      { ...lastState, meta: null },
+      { ...initState, meta: null })
+    ) {
+      this.history.pop();
+      this.updateUrl(initState, { replace: true });
+    }
   };
 
   /**
@@ -477,8 +486,7 @@ export class Navigator {
       m: modal,
       ...toStateParams,
     };
-
-    const buildedSearch = buildQueryParams(stateToUrl);
+    const buildedSearch = buildQueryParams(stateToUrl, '', this.config);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
     return `${this.config.base}${search}`;
   }
@@ -636,7 +644,10 @@ export class Navigator {
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
-    const sameState = deepEqual(this.state, newState);
+    const sameState = deepEqual(
+      { ...this.state, meta: null },
+      { ...newState, meta: null }
+    );
     const isBack = deepEqual(prevHistoryState, newState);
     if (sameState) {
       this.broadCastState();
@@ -733,10 +744,9 @@ export class Navigator {
       stateToUrl.m = state.modal;
     }
 
-    const buildedSearch = buildQueryParams(stateToUrl);
+    const buildedSearch = buildQueryParams(stateToUrl, '', this.config);
     const search = buildedSearch.length ? '?' + buildedSearch : '';
     const url = browser.getLocation(this.config, search);
-
     if (opts.replace) {
       browser.replaceState(stateToHistory, title, url);
     } else {

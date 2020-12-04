@@ -3,6 +3,7 @@ import RouteNode from './tree/RouteNode';
 
 export type NavigatorErrorLogger = (errorStr: string) => void;
 
+export type NavigatorEscapeFn = (str: string) => string;
 export interface NavigatorConfig {
   defaultRoute?: string;
   defaultParams?: any;
@@ -15,6 +16,8 @@ export interface NavigatorConfig {
   preservePath?: boolean;
   fillStackToBrowser?: boolean;
   useBrowserStack?: boolean;
+  escapeParams?: boolean;
+  escape?: NavigatorEscapeFn;
   errorLogger?: NavigatorErrorLogger;
 }
 

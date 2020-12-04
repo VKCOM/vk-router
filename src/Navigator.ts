@@ -832,8 +832,11 @@ export class Navigator {
      * Выполнение перехода на начальный роут и добавление записи в историю,
      * обработка случая если роуты отсутствуют.
      */
-    if(initState) {
-      return;
+    if (initState && initState.page) {
+      const routeName = initState.modal || initState.page;
+      const params = initState.params;
+
+      this.go(routeName, params, { firstLoad: true });
     } else if (startRoute) {
       this.go(startRoute, params, opts);
     } else {

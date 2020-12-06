@@ -718,8 +718,20 @@ export class Navigator {
    * иначе действует как this.back
    * cutHistory - делает возврат на разницу между текущей историей и историей на момент открытия первого модального окна
   */
+
   public closeModal = ({ sequence = true, cutHistory = false }: NavigatorCloseModalOpts = {}) => {
     const { modal, page } = this.state;
+
+    const rewindTo = (page: string) => {
+      const stack = this.history;
+      let noModalState = stack.pop();
+      while (noModalState.page === page && noModalState.modal) {
+        noModalState = stack.pop();
+      };
+      stack.push(noModalState);
+      this.setState(noModalState);
+    };
+
     if (sequence) {
       if (modal && page) {
         if (cutHistory && this.modalSequence) {
@@ -727,14 +739,10 @@ export class Navigator {
           if (historyDiff < 0) {
             window.history.go(historyDiff);
           } else {
-            this.back();
+            rewindTo(page);
           }
         } else {
-          let noModalState = this.history.pop();
-          while (noModalState.page === page && noModalState.modal) {
-            noModalState = this.history.pop();
-            this.setState(noModalState);
-          };
+          rewindTo(page);
         }
       } else {
         this.back();

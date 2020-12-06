@@ -16,6 +16,7 @@ import {
   NavigatorSubscriber,
   NavigatorConfig,
   NavigatorOptions,
+  NavigatorCloseModalOpts,
   NavigatorParams,
   NavigatorRouteHandler,
   NavigatorRouteHandlerCollection,
@@ -106,6 +107,8 @@ export class Navigator {
   private tree: TreeRoutes;
 
   private browserSessionId: string;
+
+  private readonly sequenceStart: number;
 
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
@@ -702,7 +705,28 @@ export class Navigator {
       browser.pushState(stateToHistory, title, url);
     }
   };
-
+  /**
+   * Метод закрытия для модальных окон.
+   * sequence - история отматывается до активной страницы без модального окна,
+   * иначе действует как this.back
+   * cutHistory - делает возврат на разницу между текущей историей и историей на момент открытия первого модального окна
+  */
+  public closeModal = ({ sequence = true }: NavigatorCloseModalOpts = {}) => {
+    const { modal, page } = this.state;
+    if (sequence) {
+      if (modal && page) {
+        let noModalState = this.history.pop();
+        while (noModalState.page === page && noModalState.modal) {
+          noModalState = this.history.pop();
+          this.setState(noModalState);
+        };
+      } else {
+        this.back();
+      }
+    } else {
+      this.back();
+    }
+  };
   /**
    * Метод навигации назад
    * */

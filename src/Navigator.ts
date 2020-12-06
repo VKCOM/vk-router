@@ -108,7 +108,7 @@ export class Navigator {
 
   private browserSessionId: string;
 
-  private readonly sequenceStart: number;
+  private modalSequence = 0;
 
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
@@ -353,7 +353,7 @@ export class Navigator {
    */
   private readonly buildState = (url: string) => {
     const path = urlToPath(url, this.config);
-    const { p: page, m: modal = null, ...routeParams } = getQueryParams(decodeURI(path));
+    const { p: page, m: modal = null, ...routeParams } = getQueryParams(path);
     const RouteNode = this.tree.getRouteNode(page);
 
     let State: NavigatorState = this.defaultState;
@@ -615,6 +615,13 @@ export class Navigator {
       { ...newState, meta: null }
     );
     const isBack = deepEqual(prevHistoryState, newState);
+
+    if (!this.state.modal && newState.modal && !isBack) {
+      this.modalSequence = window.history.length;
+    } else if (!newState.modal) {
+      this.modalSequence = 0;
+    }
+
     if (sameState && !options.firstLoad) {
       this.broadCastState();
       return;
@@ -711,15 +718,24 @@ export class Navigator {
    * иначе действует как this.back
    * cutHistory - делает возврат на разницу между текущей историей и историей на момент открытия первого модального окна
   */
-  public closeModal = ({ sequence = true }: NavigatorCloseModalOpts = {}) => {
+  public closeModal = ({ sequence = true, cutHistory = false }: NavigatorCloseModalOpts = {}) => {
     const { modal, page } = this.state;
     if (sequence) {
       if (modal && page) {
-        let noModalState = this.history.pop();
-        while (noModalState.page === page && noModalState.modal) {
-          noModalState = this.history.pop();
-          this.setState(noModalState);
-        };
+        if (cutHistory && this.modalSequence) {
+          const historyDiff = this.modalSequence - window.history.length;
+          if (historyDiff < 0) {
+            window.history.go(historyDiff);
+          } else {
+            this.back();
+          }
+        } else {
+          let noModalState = this.history.pop();
+          while (noModalState.page === page && noModalState.modal) {
+            noModalState = this.history.pop();
+            this.setState(noModalState);
+          };
+        }
       } else {
         this.back();
       }

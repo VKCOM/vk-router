@@ -116,7 +116,8 @@ export const buildQueryParams = (
 export const buildPathFromDotPath = (path: string) =>
   path ? '/' + path.split('.').join('/') : '';
 
-export const urlToPath = (url: string, options: any) => {
+export const urlToPath = (url: string, opts: any) => {
+  const { useHash, hashPrefix = '', base = '' } = opts;
   const match = url.match(/^(?:http|https):\/\/(?:[0-9a-z_\-.:]+?)(?=\/)(.*)$/);
   const path = match ? match[1] : url;
 
@@ -128,11 +129,11 @@ export const urlToPath = (url: string, options: any) => {
   const hash = pathParts[2] || '';
   const search = pathParts[3] || '';
 
-  return (
-    (options.useHash
-      ? hash.replace(new RegExp('^#' + options.hashPrefix), '')
-      : options.base
-        ? pathname.replace(new RegExp('^' + options.base), '')
+  return decodeURI(
+    (useHash
+      ? hash.replace(new RegExp('^#' + String(hashPrefix)), '')
+      : base
+        ? pathname.replace(new RegExp('^' + String(base)), '')
         : pathname) + search
   );
 };

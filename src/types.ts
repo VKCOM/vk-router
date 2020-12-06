@@ -129,6 +129,12 @@ export interface BrowserOptions {
   subRouteKey?: string;
 }
 
+export type NavigatorCloseModalOpts  = {
+  closeSequence?: boolean;
+  proceedSequence?: boolean;
+  goToPage?: boolean;
+  params?: NavigatorParams;
+}
 export interface Browser {
   getBase(): string;
   pushState(state: HistoryState, title: string | null, path: string): void;

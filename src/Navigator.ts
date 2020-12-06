@@ -17,6 +17,7 @@ import {
   NavigatorConfig,
   NavigatorOptions,
   NavigatorParams,
+  NavigatorCloseModalOpts,
   NavigatorRouteHandler,
   NavigatorRouteHandlerCollection,
   NavigatorErrorLogger,
@@ -48,7 +49,7 @@ const defaultConfig: NavigatorConfig = {
   routeKey: 'route',
   preserveHash: false,
   preservePath: true,
-  fillStackToBrowser: true,
+  fillStackToBrowser: false,
 };
 
 /**
@@ -755,18 +756,26 @@ export class Navigator {
   };
 
   /**
-   * Метод навигации назад
+   * Метод навигации назад. Можем шагнуть дальше чем на шаг назад, но только назад
    * */    
-  public back: VoidFunction = () => {
+  public back: VoidFunction = (position?: number) => {
     const browserStackLen = window.history.length;
     if (this.config.fillStackToBrowser) {
       window.history.back();
     } else if (browserStackLen > 2) {
-      window.history.back();
+      if (Number.isInteger(position) && position < 0) {
+        window.history.go(position);
+      } else {
+        window.history.back();
+      }
     } else {
       const [rootState] = this.history;
-
-      this.stackPointer--;
+  
+      if (Number.isInteger(position) && position < 0) {
+        this.stackPointer = position < 0 ? this.stackPointer - position : position; 
+      } else {
+        this.stackPointer--;
+      }
 
       const prevState = this.history[this.stackPointer] || rootState;  
       this.replaceState(prevState);
@@ -875,6 +884,31 @@ export class Navigator {
     return this.prevState;
   };
 
+  /** 
+   * Метод закрытия для модальных окон. 
+   * closeSequence - история отматывается до страницы без модального окна, 
+   * иначе действует как this.back
+  */
+  public closeModal = ({ closeSequence = true }: NavigatorCloseModalOpts = {}) => {
+    const { modal, page } = this.state;
+    if(window.history.length)
+    if (closeSequence) {
+      if (modal && page) {
+          const historyStack = [...this.history];
+          let noModalState = this.state;
+          console.log('this.history', this.history);
+          while (noModalState.page === page && noModalState.modal) {
+            noModalState = historyStack.pop();
+          }
+          
+          this.setState(noModalState);
+        } else {
+          this.back();
+        }
+      } else {
+        this.back();
+      }
+  }
   /**
    * Утилита роутера, возвращает булево значение
    * является ли переданный роут с параметрами активным в данном состоянии роутера.

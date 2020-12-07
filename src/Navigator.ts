@@ -16,6 +16,7 @@ import {
   NavigatorSubscriber,
   NavigatorConfig,
   NavigatorOptions,
+  NavigatorCloseModalOpts,
   NavigatorParams,
   NavigatorRouteHandler,
   NavigatorRouteHandlerCollection,
@@ -106,6 +107,8 @@ export class Navigator {
   private tree: TreeRoutes;
 
   private browserSessionId: string;
+
+  private modalSequence = 0;
 
   private removePopStateListener: VoidFunction;
   private removeLinkPressListener: VoidFunction;
@@ -612,6 +615,13 @@ export class Navigator {
       { ...newState, meta: null }
     );
     const isBack = deepEqual(prevHistoryState, newState);
+
+    if (!this.state.modal && newState.modal && !isBack) {
+      this.modalSequence = window.history.length;
+    } else if (!newState.modal) {
+      this.modalSequence = 0;
+    }
+
     if (sameState && !options.firstLoad) {
       this.broadCastState();
       return;
@@ -702,7 +712,45 @@ export class Navigator {
       browser.pushState(stateToHistory, title, url);
     }
   };
+  /**
+   * Метод закрытия для модальных окон.
+   * sequence - история отматывается до активной страницы без модального окна,
+   * иначе действует как this.back
+   * cutHistory - делает возврат на разницу между текущей историей и историей на момент открытия первого модального окна
+  */
 
+  public closeModal = ({ sequence = true, cutHistory = false }: NavigatorCloseModalOpts = {}) => {
+    const { modal, page } = this.state;
+
+    const rewindTo = (page: string) => {
+      const stack = this.history;
+      let noModalState = stack.pop();
+      while (noModalState.page === page && noModalState.modal) {
+        noModalState = stack.pop();
+      };
+      stack.push(noModalState);
+      this.setState(noModalState);
+    };
+
+    if (sequence) {
+      if (modal && page) {
+        if (cutHistory && this.modalSequence) {
+          const historyDiff = this.modalSequence - window.history.length;
+          if (historyDiff < 0) {
+            window.history.go(historyDiff);
+          } else {
+            rewindTo(page);
+          }
+        } else {
+          rewindTo(page);
+        }
+      } else {
+        this.back();
+      }
+    } else {
+      this.back();
+    }
+  };
   /**
    * Метод навигации назад
    * */

@@ -1,6 +1,6 @@
 {
   "name": "@vkontakte/router",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "VK Web Router",
   "main": "dist/index.js",
   "types": "dist/types/index.d.ts",

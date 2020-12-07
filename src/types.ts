@@ -16,6 +16,7 @@ export interface NavigatorConfig {
   preserveHash?: boolean;
   preservePath?: boolean;
   escapeParams?: boolean;
+  fillStack?: boolean;
   escape?: NavigatorEscapeFn;
   errorLogger?: NavigatorErrorLogger;
 }
@@ -32,6 +33,11 @@ export type NavigatorGetState = (
 export interface NavigatorParams {
   [key: string]: any;
 }
+
+export type NavigatorCloseModalOpts = {
+  sequence?: boolean;
+  cutHistory?: boolean;
+};
 
 export type NavigatorRouteProperties = Record<string, any>;
 

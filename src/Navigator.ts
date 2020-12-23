@@ -73,6 +73,10 @@ export class Navigator {
    */
   public history: NavigatorHistoryRecord[] = [];
   /**
+   * Текущая позиция в стеке навигации
+   */
+  private stackPointer = 0;
+  /**
    * Ссылка на переданные в конфиге коллекции маршрутов
    */
   public routes: NavigatorRoute[] = [];
@@ -149,6 +153,7 @@ export class Navigator {
       meta: {
         source: 'default',
       },
+      options: {},
     };
     /**
      * собираем начальное состояние из URL
@@ -174,13 +179,13 @@ export class Navigator {
   private readonly buildHistory = () => {
     const initState = this.getState();
     const { page, params } = initState;
-    const { rootPage } = this.config;
+    const { defaultRoute } = this.config;
     /**
      * Вхождение в историю для rootPage
      * если мы не на рутовой странице то:
      */
-    if (page !== rootPage) {
-      const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
+    if (page !== defaultRoute) {
+      const { newState: rootPageState } = this.makeState(defaultRoute, null, null, 'default');
       this.history.push(rootPageState);
       this.updateUrl(rootPageState);
     }
@@ -208,12 +213,14 @@ export class Navigator {
 
     const lastState = this.history[this.history.length - 1];
     if (deepEqual(
-      { ...lastState, meta: null },
-      { ...initState, meta: null })
+      { ...lastState, meta: null, options: null },
+      { ...initState, meta: null, options: null })
     ) {
       this.history.pop();
       this.updateUrl(initState, { replace: true });
     }
+
+    this.stackPointer = this.history.length - 1;
   };
 
   /**
@@ -226,19 +233,23 @@ export class Navigator {
     const [rootState] = this.history;
     const pointedState = this.history[pointer];
     const nextState = pointedState || rootState;
-    const isSameSession =
-      event.state?.browserSessionId === this.browserSessionId;
+    const useSameSession = this.config.fillStack
+      ? event.state?.browserSessionId === this.browserSessionId
+      : true;
+
     /**
      * Заменяем текущее состояние если идем обратно.
      * Если страницы нет в стеке - заменяем на rootState
-     * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
+     * Еcли запись из стека браузера не из этой cессии - заменяем на rootState c defaultRoute
      */
-    if (pointer !== undefined && isSameSession) {
+    if (pointer !== undefined && useSameSession) {
+      this.stackPointer = pointer;
       this.replaceState({
         ...nextState,
         meta: { source: 'popstate' },
       });
-    } else if (!isSameSession || !pointedState) {
+    } else if (!useSameSession || !pointedState) {
+      this.stackPointer = 0; // defaultRoute index;
       this.replaceState({
         ...rootState,
         meta: { source: 'popstate' },
@@ -547,6 +558,7 @@ export class Navigator {
   private readonly makeState = (
     routeName: string,
     routeParams: NavigatorParams = {},
+    options: NavigatorOptions = {},
     stateSource?: NavigatorStateSource,
   ) => {
     const prevState = this.getState();
@@ -577,6 +589,7 @@ export class Navigator {
       modal: null,
       params,
       meta,
+      options,
     };
 
     if (routeNode?.data?.[subRouteKey]) {
@@ -587,6 +600,7 @@ export class Navigator {
           ...routeParams,
         },
         meta,
+        options,
         modal: routeNode.name,
       };
     }
@@ -606,6 +620,7 @@ export class Navigator {
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
       routeParams,
+      options,
       'go'
     );
     const historyLength = this.history.length;
@@ -627,9 +642,13 @@ export class Navigator {
       return;
     }
 
-    if (isBack) {
+    if (options.replace) {
+      this.history[this.stackPointer] = newState;
+    } else if (isBack) {
+      this.stackPointer--;
       this.history.pop();
     } else {
+      this.stackPointer++;
       this.history.push(newState);
     }
 
@@ -657,7 +676,7 @@ export class Navigator {
     if (routeData && routeData.updateUrl !== false) {
       this.updateUrl(newState, options);
     } else {
-      this.updateUrl(prevState, { fakeEntry: true });
+      this.updateUrl(prevState, { ...options, fakeEntry: true });
     }
 
     if (done) {
@@ -712,13 +731,13 @@ export class Navigator {
       browser.pushState(stateToHistory, title, url);
     }
   };
+
   /**
    * Метод закрытия для модальных окон.
    * sequence - история отматывается до активной страницы без модального окна,
    * иначе действует как this.back
    * cutHistory - делает возврат на разницу между текущей историей и историей на момент открытия первого модального окна
   */
-
   public closeModal = ({ sequence = true, cutHistory = false }: NavigatorCloseModalOpts = {}) => {
     const { modal, page } = this.state;
 
@@ -751,6 +770,7 @@ export class Navigator {
       this.back();
     }
   };
+
   /**
    * Метод навигации назад
    * */
@@ -873,11 +893,11 @@ export class Navigator {
     const { newState: compareState } = this.makeState(
       routeName,
       compareRouteParams,
-      state.meta.source, // чтобы создавать корректный стейт для сравнения
+      state.options,
+      state.meta.source, // передаем state.meta и state.options чтобы создавать корректный стейт для сравнения
     );
 
     const areSameStates = deepEqual(state, compareState);
-
     if (strictCompare) {
       return areSameStates;
     } else if (routeParams && Object.keys(routeParams).length) {

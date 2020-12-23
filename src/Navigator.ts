@@ -212,10 +212,7 @@ export class Navigator {
     }
 
     const lastState = this.history[this.history.length - 1];
-    if (deepEqual(
-      { ...lastState, meta: null, options: null },
-      { ...initState, meta: null, options: null })
-    ) {
+    if (deepEqual(lastState, initState, undefined, ['meta', 'options'])) {
       this.history.pop();
       this.updateUrl(initState, { replace: true });
     }
@@ -625,11 +622,10 @@ export class Navigator {
     );
     const historyLength = this.history.length;
     const prevHistoryState = this.history[historyLength - 2];
-    const sameState = deepEqual(
-      { ...this.state, meta: null },
-      { ...newState, meta: null }
-    );
-    const isBack = deepEqual(prevHistoryState, newState);
+    const sameState = deepEqual(this.state, newState, undefined, ['meta']);
+    const isBack = deepEqual(prevHistoryState, newState, undefined, ['meta']);
+    const currentParams = this.state.params;
+    const nextParams = newState.params;
 
     if (!this.state.modal && newState.modal && !isBack) {
       this.modalSequence = window.history.length;
@@ -656,13 +652,13 @@ export class Navigator {
       newState.params = decodeParams(newState.params);
     }
 
-    const areSameParams = deepEqual(this.state.params, newState.params);
+    const areSameParams = deepEqual(currentParams, nextParams);
     /**
      * Для отработки хуков которые зависят от того, обновился объект параметров или нет
      * сохраняем ссылку на объект параметров предыдущего стейта если параметры не изменились
      */
     if (areSameParams) {
-      newState.params = this.state.params;
+      newState.params = currentParams;
     }
 
     this.setState(newState);
@@ -670,7 +666,7 @@ export class Navigator {
     const prevState = this.getPrevState();
 
     if (encodeParams) {
-      newState.params = encodeParams(newState.params);
+      newState.params = encodeParams(nextParams);
     }
 
     if (routeData && routeData.updateUrl !== false) {
@@ -893,11 +889,9 @@ export class Navigator {
     const { newState: compareState } = this.makeState(
       routeName,
       compareRouteParams,
-      state.options,
-      state.meta.source, // передаем state.meta и state.options чтобы создавать корректный стейт для сравнения
     );
 
-    const areSameStates = deepEqual(state, compareState);
+    const areSameStates = deepEqual(state, compareState, undefined, ['meta', 'options']);
     if (strictCompare) {
       return areSameStates;
     } else if (routeParams && Object.keys(routeParams).length) {

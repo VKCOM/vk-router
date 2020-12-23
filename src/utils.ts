@@ -166,7 +166,8 @@ export const hasProperties = (
 export const deepEqual = (
   object1: any,
   object2: any,
-  strictValueCompare = true
+  strictValueCompare = true,
+  ignoreProps: string[] = [],
 ) => {
   if (!object1 || !object2) {
     return false;
@@ -179,8 +180,12 @@ export const deepEqual = (
   }
 
   for (const key of keys1) {
+    if (ignoreProps.includes(key)) {
+      continue;
+    }
     const val1 = object1[key];
     const val2 = object2[key];
+
     const areObjects = isObject(val1) && isObject(val2);
     if (
       (areObjects && !deepEqual(val1, val2)) ||

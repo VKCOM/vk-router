@@ -136,6 +136,7 @@ export class Navigator {
      * Выполнение этапа инициализации начального состояния роутера
      */
     this.initialize();
+    console.log('router', this);
   }
 
   /**
@@ -633,7 +634,7 @@ export class Navigator {
       this.modalSequence = 0;
     }
 
-    if (sameState && !options.firstLoad) {
+    if (sameState || options.firstLoad) {
       this.broadCastState();
       return;
     }
@@ -736,7 +737,9 @@ export class Navigator {
   */
   public closeModal = ({ sequence = true, cutHistory = false }: NavigatorCloseModalOpts = {}) => {
     const { modal, page } = this.state;
-
+    /**
+     * функция отмотки стека к определенной странице
+     */
     const rewindTo = (page: string) => {
       const stack = this.history;
       let noModalState = stack.pop();
@@ -817,7 +820,7 @@ export class Navigator {
       const routeName = initState.modal || initState.page;
       const params = initState.params;
 
-      this.go(routeName, params, { firstLoad: true });
+      this.go(routeName, params);
     } else if (startRoute) {
       this.go(startRoute, params, opts);
     } else {

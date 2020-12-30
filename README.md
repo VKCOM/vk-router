@@ -18,7 +18,7 @@ yarn add @vkontakte/router
 
 ## Использование
 
-```java-script
+```js
 // router.js
   import { createNavigator } from '@vkontakte/router';
 
@@ -46,7 +46,7 @@ yarn add @vkontakte/router
   export default router;
 ``` 
 в классовых компонентах
-```
+```js
 // App.js
    import { router } from './router.js';
    import { Component } from 'react';
@@ -75,7 +75,7 @@ yarn add @vkontakte/router
    }
 ``` 
 с использованием хуков
- ``` 
+ ```js
    import { useEffect, useState } from 'react';
    
    const App = () => {
@@ -133,7 +133,7 @@ yarn add @vkontakte/router
 Название маршрутов должно быть уникальным. Создавать маршруты и явно задавать им позицию в дереве навигации можно следующим образом:
 
 через children:
-``
+``js
 const routes = [
     { name: 'home', 
       children: [ { name: 'contacts' } ]
@@ -142,11 +142,12 @@ const routes = [
 ``
 
 через указание name
-``const routes = [
-      { name: 'home' },
-      { name: 'home.contacts' }
-    ];
-``
+```js
+const routes = [
+  { name: 'home' },
+  { name: 'home.contacts' }
+];
+```
 
 ## Перемещение по стеку навигации
 При старте роутер создает внутренний стек навигации и наполняет его вхождениями на страницы.
@@ -161,7 +162,7 @@ const routes = [
 По умолчанию, нажатия на все ссылки, которые относятся к ресурсу, на котором существует наше приложение,  обрабатываются внутри роутера.
 ## Состояние навигации
 Роутер возвращает состояние в виде объекта 
-```
+```js
  {
    page: 'home', // текущая страница 
    modal: 'cabinet', // текущее модальное окно
@@ -192,7 +193,7 @@ const routes = [
 
 При переходе на переданный маршрут мы должны получить состояние, в котором как минимум будет указан page. В случае, если этого не произошло, мы можем поймать выполнить переход на 404 страницу, либо помощью ``сonfig.errorLogger`` получить и обработать соответствующую ошибку и выполнить переход на 404 страницу нашего приложения. Страница должна быть указана в коллекции маршрутов.
 
-```
+```js
 const errorLogger = (err) => {
  if (err === ROUTER_ERROR_NOT_FOUND) {
     router.go('404');

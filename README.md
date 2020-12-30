@@ -1,4 +1,4 @@
-# VK-router
+# VK Router
 
 Универсальный модуль навигации позволяет создать систему навигации в приложении на основе списка маршрутов в вашем приложении.
 
@@ -8,19 +8,19 @@
 
 ## Установка
 
-Используйте [npm](https://www.npmjs.com/) или [yarn](https://yarnpkg.com/) для установки vk-router.
+Используйте [npm](https://www.npmjs.com/) или [yarn](https://yarnpkg.com/) для установки.
 
 ```bash
-npm install @vkontakte/vk-router
+npm install @vkontakte/router
 
-yarn add @vkontakte/vk-router
+yarn add @vkontakte/router
 ```
 
 ## Использование
 
 ```java-script
 // router.js
-  import { createNavigator } from 'vkontakte/vk-router';
+  import { createNavigator } from '@vkontakte/router';
 
   // коллекция маршрутов
   const routes = [
@@ -96,11 +96,11 @@ yarn add @vkontakte/vk-router
    }
 
 ``` 
-   с использованием HOC и контекста из vk-router
+   с использованием HOC и контекста из
 ```
 // index.js
    import ReactDOM from 'react';
-   import { Provider as Navigator } from '@vkontakte/vk-router';
+   import { Provider as Navigator } from '@vkontakte/router';
         
    ReactDOM.render(
      <Navigator config={config} routes={routes}>
@@ -109,7 +109,7 @@ yarn add @vkontakte/vk-router
    , document.getElementById('root'));
 
 // App.js
-   import { withNavigator } from '@vkontakte/vk-router';
+   import { withNavigator } from '@vkontakte/router';
    const App = ({ go, state }) => { 
      // ...
    }

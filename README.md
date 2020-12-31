@@ -100,12 +100,12 @@ yarn add @vkontakte/router
 ```
 // index.js
    import ReactDOM from 'react';
-   import { Provider as Navigator } from '@vkontakte/router';
+   import { NavigatorProvider } from '@vkontakte/router';
         
    ReactDOM.render(
-     <Navigator config={config} routes={routes}>
+     <NavigatorProvider config={config} routes={routes}>
       <App />
-     </Navigator>
+     </NavigatorProvider>
    , document.getElementById('root'));
 
 // App.js

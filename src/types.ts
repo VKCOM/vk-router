@@ -79,6 +79,7 @@ export interface NavigatorState {
   history?: NavigatorHistoryRecord[];
   params: NavigatorParams;
   counter?: number;
+  options?: NavigatorOptions;
   activeNodes?: RouteNode[];
   meta: NavigatorMeta;
 }

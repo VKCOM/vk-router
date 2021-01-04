@@ -41,7 +41,7 @@ yarn add @vkontakte/router
     defaultRoute: 'home',
   }
 
-  const router = createNavigator(config, routes);
+  const router = createNavigator(routes, config);
   router.start();
   export default router;
 ``` 

@@ -574,7 +574,7 @@ export class Navigator {
 
     let newState: NavigatorState = {
       page: routeName,
-      modal: null,
+      modal: routeData?.modal ?? null,
       params,
       meta,
     };

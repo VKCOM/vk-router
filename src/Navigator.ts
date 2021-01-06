@@ -45,7 +45,7 @@ import RouteNode from './tree/RouteNode';
 const defaultConfig: NavigatorConfig = {
   defaultRoute: 'default',
   base: '',
-  subRouteKey: 'subRoute',
+  subRouteKey: 'modal',
   routeKey: 'route',
   rootPage: undefined,
   preserveHash: false,
@@ -574,7 +574,7 @@ export class Navigator {
 
     let newState: NavigatorState = {
       page: routeName,
-      modal: routeData?.modal ?? null,
+      modal: null,
       params,
       meta,
     };

@@ -171,7 +171,7 @@ export class Navigator {
    * стека истории роутера на основе начального состояния
    * в дальнейшем перемещение по истории осуществляется только по внутреннему стеку.
    */
-  private readonly buildHistory = () => {
+  private readonly buildHistory = (options: any) => {
     const initState = this.getState();
     const { page, params } = initState;
     const { rootPage } = this.config;
@@ -182,7 +182,7 @@ export class Navigator {
     if (page !== rootPage) {
       const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
       this.history.push(rootPageState);
-      this.updateUrl(rootPageState);
+      this.updateUrl(rootPageState, options);
     }
     /**
      * Заполняем стек для остальных страниц, если не задан rootPage,
@@ -207,12 +207,13 @@ export class Navigator {
     }
 
     const lastState = this.history[this.history.length - 1];
+
     if (deepEqual(
       { ...lastState, meta: null },
       { ...initState, meta: null })
     ) {
       this.history.pop();
-      this.updateUrl(initState, { replace: true });
+      this.updateUrl(initState, { ...options, replace: true });
     }
   };
 
@@ -603,12 +604,14 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
+    console.log('go', routeName, routeParams, options);
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
       routeParams,
       'go'
     );
     const historyLength = this.history.length;
+    const currentStatePointer = historyLength - 1;
     const prevHistoryState = this.history[historyLength - 2];
     const sameState = deepEqual(
       { ...this.state, meta: null },
@@ -626,8 +629,10 @@ export class Navigator {
       this.broadCastState();
       return;
     }
-
-    if (isBack) {
+    // replace во внутреннем стеке
+    if (options.replace) {
+      this.history[currentStatePointer] = newState;
+    } else if (isBack) {
       this.history.pop();
     } else {
       this.history.push(newState);
@@ -766,7 +771,7 @@ export class Navigator {
   public start = (
     startRoute?: string,
     params?: NavigatorParams,
-    opts?: NavigatorOptions
+    opts: NavigatorOptions = {}
   ) => {
     const initState = this.getState();
     const { defaultRoute } = this.config;
@@ -792,12 +797,16 @@ export class Navigator {
     /**
      * Заполнение стека истории до перехода на активный роут
      */
-    this.buildHistory();
+    this.buildHistory(opts);
     /**
      * Выполнение перехода на начальный роут и добавление записи в историю,
      * обработка случая если роуты отсутствуют.
      */
     if (initState && initState.page) {
+      // Если передан  cold: true - роутер построит начальное состояние, но перехода не будет
+      if (opts.cold) {
+        return;
+      }
       const routeName = initState.modal || initState.page;
       const params = initState.params;
 

@@ -45,7 +45,7 @@ import RouteNode from './tree/RouteNode';
 const defaultConfig: NavigatorConfig = {
   defaultRoute: 'default',
   base: '',
-  subRouteKey: 'subRoute',
+  subRouteKey: 'modal',
   routeKey: 'route',
   rootPage: undefined,
   preserveHash: false,

@@ -31,8 +31,17 @@ jobs:
       - name: Run building
         run: npm run build
 
-      - name: Uploading
-        uses: 'actions/upload-artifact@v2'
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-            name: my-artifact
-            path: ${{ github.workspace }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - First Change
+            - Second Change
+          draft: false
+          prerelease: false

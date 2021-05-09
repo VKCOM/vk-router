@@ -30,3 +30,9 @@ jobs:
 
       - name: Run building
         run: npm run build
+
+      - name: Uploading
+        uses: 'actions/upload-artifact@v2'
+        with:
+            name: my-artifact
+            path: ${{ github.workspace }}

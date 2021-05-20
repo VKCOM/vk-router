@@ -141,7 +141,7 @@ export class Navigator {
   private readonly initialize = () => {
     const firstRouteName = (this.routes[0] || {}).name;
     const page = this.config.defaultRoute || firstRouteName;
-
+    console.log('--->', this.config);
     this.defaultState = {
       page,
       modal: null,
@@ -174,7 +174,7 @@ export class Navigator {
   private readonly buildHistory = () => {
     const initState = this.getState();
     const { page, params } = initState;
-    const { rootPage } = this.config;
+    const { rootPage, fillStack } = this.config;
     /**
      * Вхождение в историю для rootPage
      * если мы не на рутовой странице то:
@@ -182,7 +182,9 @@ export class Navigator {
     if (page !== rootPage) {
       const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
       this.history.push(rootPageState);
-      this.updateUrl(rootPageState);
+      if (fillStack) {
+        this.updateUrl(rootPageState);
+      }
     }
     /**
      * Заполняем стек для остальных страниц, если не задан rootPage,
@@ -201,9 +203,10 @@ export class Navigator {
           source: 'popstate',
         },
       };
-
       this.history.push(state);
-      this.updateUrl(state);
+      if (fillStack) {
+        this.updateUrl(state);
+      }
     }
 
     const lastState = this.history[this.history.length - 1];
@@ -212,7 +215,9 @@ export class Navigator {
       { ...initState, meta: null })
     ) {
       this.history.pop();
-      this.updateUrl(initState, { replace: true });
+      if (fillStack) {
+        this.updateUrl(initState, { replace: true });
+      }
     }
   };
 

@@ -762,21 +762,21 @@ export class Navigator {
    * Метод навигации назад
    * */
   public back: VoidFunction = (byStack?: boolean) => {
-    if ((window.history.length <= 2 || byStack) && this.history.length > 0) {
-      const activeRoute = this.history.pop();
-      const activeNodes = this.getActiveNodes(activeRoute.modal || activeRoute.page);
-      const activeParams = this.getActiveParams(activeNodes, this.state.params);
-      const state: NavigatorState = {
-        page: activeRoute.page,
-        modal: activeRoute.modal,
-        params: activeParams,
-        meta: {
-          source: 'popstate',
-        },
-      };
-      this.updateUrl(state, { replace: true });
-      return;
-    }
+    // if ((window.history.length <= 2 || byStack) && this.history.length > 0) {
+    //   const activeRoute = this.history.pop();
+    //   const activeNodes = this.getActiveNodes(activeRoute.modal || activeRoute.page);
+    //   const activeParams = this.getActiveParams(activeNodes, this.state.params);
+    //   const state: NavigatorState = {
+    //     page: activeRoute.page,
+    //     modal: activeRoute.modal,
+    //     params: activeParams,
+    //     meta: {
+    //       source: 'popstate',
+    //     },
+    //   };
+    //   this.updateUrl(state, { replace: true });
+    //   return;
+    // }
     window.history.back();
   };
   /**

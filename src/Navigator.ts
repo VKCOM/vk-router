@@ -141,7 +141,7 @@ export class Navigator {
   private readonly initialize = () => {
     const firstRouteName = (this.routes[0] || {}).name;
     const page = this.config.defaultRoute || firstRouteName;
-    console.log('--->', this.config);
+
     this.defaultState = {
       page,
       modal: null,
@@ -180,9 +180,9 @@ export class Navigator {
      * если мы не на рутовой странице то:
      */
     if (page !== rootPage) {
-      const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
-      this.history.push(rootPageState);
       if (fillStack) {
+        const { newState: rootPageState } = this.makeState(rootPage, null, 'default');
+        this.history.push(rootPageState);
         this.updateUrl(rootPageState);
       }
     }
@@ -243,7 +243,7 @@ export class Navigator {
         ...nextState,
         meta: { source: 'popstate' },
       });
-    } else if (!isSameSession || !pointedState) {
+    } else if ((!isSameSession || !pointedState) && this.config.fillStack) {
       this.replaceState({
         ...rootState,
         meta: { source: 'popstate' },
@@ -632,7 +632,10 @@ export class Navigator {
       return;
     }
 
-    if (isBack) {
+    if (options.replace) {
+      this.history.pop();
+      this.history.push(newState);
+    } else if (isBack || options.replace) {
       this.history.pop();
     } else {
       this.history.push(newState);
@@ -664,7 +667,6 @@ export class Navigator {
     } else {
       this.updateUrl(prevState, { fakeEntry: true });
     }
-
     if (done) {
       done(newState);
     }
@@ -759,9 +761,27 @@ export class Navigator {
   /**
    * Метод навигации назад
    * */
-  public back: VoidFunction = () => {
+  public back: VoidFunction = (byStack?: boolean) => {
+    if ((window.history.length <= 2 || byStack) && this.history.length > 0) {
+      const activeRoute = this.history.pop();
+      const activeNodes = this.getActiveNodes(activeRoute.modal || activeRoute.page);
+      const activeParams = this.getActiveParams(activeNodes, this.state.params);
+      const state: NavigatorState = {
+        page: activeRoute.page,
+        modal: activeRoute.modal,
+        params: activeParams,
+        meta: {
+          source: 'popstate',
+        },
+      };
+      this.updateUrl(state, { replace: true });
+      return;
+    }
     window.history.back();
   };
+  /**
+   * Метод програмной навигации назад - происходит переход по внутреннему стеку с replaceState в стеке браузера
+   */
 
   /**
    * Метод активирует роутер, выполняет метод построение истории buildHistory,
@@ -806,15 +826,15 @@ export class Navigator {
       const routeName = initState.modal || initState.page;
       const params = initState.params;
 
-      this.go(routeName, params, { firstLoad: true });
+      this.go(routeName, params, { firstLoad: true, replace: true });
     } else if (startRoute) {
-      this.go(startRoute, params, opts);
+      this.go(startRoute, params, { ...opts, replace: true });
     } else {
       if (defaultRoute) {
-        this.go(defaultRoute);
+        this.go(defaultRoute, null, { replace: true });
       } else {
         if (firstRoute && firstRoute.name) {
-          this.go(firstRoute.name);
+          this.go(firstRoute.name, null, { replace: true });
         } else {
           this.errorLogger(ERROR_NO_ROUTES);
         }

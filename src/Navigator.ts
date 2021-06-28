@@ -231,7 +231,6 @@ export class Navigator {
     const [rootState] = this.history;
     const pointedState = this.history[pointer];
     const nextState = pointedState || rootState;
-    console.log('onPopstate', pointedState);
     const isSameSession =
       event.state?.browserSessionId === this.browserSessionId;
     /**

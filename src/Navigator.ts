@@ -231,6 +231,7 @@ export class Navigator {
     const [rootState] = this.history;
     const pointedState = this.history[pointer];
     const nextState = pointedState || rootState;
+    console.log('onPopstate', pointedState);
     const isSameSession =
       event.state?.browserSessionId === this.browserSessionId;
     /**
@@ -243,7 +244,7 @@ export class Navigator {
         ...nextState,
         meta: { source: 'popstate' },
       });
-    } else if ((!isSameSession || !pointedState) && this.config.fillStack) {
+    } else if (!pointedState && this.config.fillStack) {
       this.replaceState({
         ...rootState,
         meta: { source: 'popstate' },
@@ -763,7 +764,8 @@ export class Navigator {
    * */
   public back: VoidFunction = (byStack?: boolean) => {
     if ((window.history.length <= 2 || byStack) && this.history.length > 0) {
-      const activeRoute = this.history.pop();
+      this.history.pop();
+      const activeRoute = this.history[this.history.length - 1];
       const activeNodes = this.getActiveNodes(activeRoute.modal || activeRoute.page);
       const activeParams = this.getActiveParams(activeNodes, this.state.params);
       const state: NavigatorState = {
@@ -774,6 +776,7 @@ export class Navigator {
           source: 'popstate',
         },
       };
+      this.setState(state);
       this.updateUrl(state, { replace: true });
       return;
     }

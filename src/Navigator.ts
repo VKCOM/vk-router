@@ -230,15 +230,16 @@ export class Navigator {
     const pointer = event.state?.counter;
     const [rootState] = this.history;
     const pointedState = this.history[pointer];
-    const nextState = pointedState || rootState;
-    const isSameSession =
-      event.state?.browserSessionId === this.browserSessionId;
+    const nextState = pointedState || event.state || rootState;
+    // const isSameSession =
+    //   event.state?.browserSessionId === this.browserSessionId;
     /**
      * Заменяем текущее состояние если идем обратно.
      * Если страницы нет в стеке - заменяем на rootState
      * Еcли запись из стека браузера не из этой cессии - заменяем на rootState
      */
-    if (pointer !== undefined && isSameSession) {
+
+    if (pointer !== undefined) {
       this.replaceState({
         ...nextState,
         meta: { source: 'popstate' },
@@ -608,6 +609,7 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
+    console.log('go', routeName, routeParams, options);
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
       routeParams,
@@ -719,24 +721,33 @@ export class Navigator {
       browser.pushState(stateToHistory, title, url);
     }
   };
+
   /**
    * Метод закрытия для модальных окон.
    * sequence - история отматывается до активной страницы без модального окна,
    * иначе действует как this.back
    * cutHistory - делает возврат на разницу между текущей историей и историей на момент открытия первого модального окна
   */
-
   public closeModal = ({ sequence = true, cutHistory = false }: NavigatorCloseModalOpts = {}) => {
-    const { modal, page } = this.state;
-
+    const { modal, page, params, meta } = this.state;
     const rewindTo = (page: string) => {
       const stack = this.history;
+
       let noModalState = stack.pop();
-      while (noModalState.page === page && noModalState.modal) {
+      while (noModalState && noModalState.page === page && noModalState.modal) {
         noModalState = stack.pop();
       };
+
+      noModalState = noModalState || {
+        page,
+        modal: null,
+        params,
+        meta,
+      };
+
       stack.push(noModalState);
       this.setState(noModalState);
+      this.updateUrl(noModalState, { replace: true });
     };
 
     if (sequence) {
@@ -768,8 +779,8 @@ export class Navigator {
       const activeNodes = this.getActiveNodes(activeRoute.modal || activeRoute.page);
       const activeParams = this.getActiveParams(activeNodes, this.state.params);
       const state: NavigatorState = {
-        page: activeRoute.page,
-        modal: activeRoute.modal,
+        page: activeRoute?.page,
+        modal: activeRoute?.modal,
         params: activeParams,
         meta: {
           source: 'popstate',
@@ -871,7 +882,6 @@ export class Navigator {
    * Утилита роутера, возвращает булево значение
    * является ли переданный роут с параметрами активным в данном состоянии роутера.
    * */
-
   public isActive = (
     routeName: string,
     routeParams?: NavigatorParams,

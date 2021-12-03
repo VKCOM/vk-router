@@ -609,7 +609,6 @@ export class Navigator {
     options: NavigatorOptions = {},
     done?: NavigatorDone
   ) => {
-    console.log('go', routeName, routeParams, options);
     const { newState, routeData, encodeParams, decodeParams } = this.makeState(
       routeName,
       routeParams,

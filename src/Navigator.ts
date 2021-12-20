@@ -1,4 +1,4 @@
-import { createRoutesTree } from './tree/Tree';
+import TreeRoutes, { createRoutesTree } from './tree/Tree';
 import {
   buildQueryParams,
   getQueryParams,
@@ -36,7 +36,6 @@ import {
 } from './constants';
 
 import browser from './browser';
-import TreeRoutes from './tree/Tree';
 import RouteNode from './tree/RouteNode';
 
 /**

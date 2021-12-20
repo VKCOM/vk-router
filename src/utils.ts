@@ -1,4 +1,4 @@
-import { NavigatorConfig } from "./types";
+import { NavigatorConfig } from './types';
 
 export const getTarget = (path: string) =>
   path ? path.split('.').reverse()[0] : '';
@@ -44,43 +44,22 @@ export const getQueryParams = (path: string) => {
     return decodedQueryString;
   }
 
-  const queryStringPieces = processedString ? processedString.split('&') : [];
+  const queryStringPieces = processedString ? processedString.split(/[&?]/g) : [];
 
   for (const piece of queryStringPieces) {
-    let [key, value] = piece.split('=');
-    value = value || '';
-    if (key.includes('.')) {
-      const segments = key.split('.');
-      const paramName = segments.pop();
-      const nodeKey = segments.join('.');
-      decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
-      decodedQueryString[nodeKey][paramName] = value;
+    const entry = piece.match(/^([^=]+)(?:=([\s\S]*))?/);
+    if (entry) {
+      const key = decodeURIComponent(entry[1]);
+      const value = decodeURIComponent(entry[2]);
+      if (key.includes('.')) {
+        const segments = key.split('.');
+        const paramName = segments.pop();
+        const nodeKey = segments.join('.');
+        decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
+        decodedQueryString[nodeKey][paramName] = value;
+      }
+      decodedQueryString[key] = value;
     }
-    decodedQueryString[key] = value;
-  }
-
-  return decodedQueryString;
-};
-
-export const getUrlParams = (url: string) => {
-  const decodedQueryString: Record<string, any> = {};
-  const processedString = url.slice(url.indexOf('?') + 1);
-  if (!processedString.length) {
-    return decodedQueryString;
-  }
-  const queryStringPieces = processedString ? processedString.split('&') : [];
-
-  for (const piece of queryStringPieces) {
-    let [key, value] = piece.split('=');
-    value = value || '';
-    if (key.includes('.')) {
-      const segments = key.split('.');
-      const paramName = segments.pop();
-      const nodeKey = segments.join('.');
-      decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
-      decodedQueryString[nodeKey][paramName] = value;
-    }
-    decodedQueryString[key] = value;
   }
 
   return decodedQueryString;

@@ -27,7 +27,7 @@ export const set = (obj: Record<string, any>, path: string, value: any) => {
   for (let i = 0; i < len - 1; i++) {
     const elem = pList[i];
     if (!obj[elem] || !isObject(obj[elem])) {
-      obj[elem] = {} as Record<string, any>;
+      obj[elem] = Object.create(null) as Record<string, any>;
     }
     obj = obj[elem];
   }
@@ -36,7 +36,7 @@ export const set = (obj: Record<string, any>, path: string, value: any) => {
 };
 
 export const getQueryParams = (path: string) => {
-  const decodedQueryString: Record<string, any> = {};
+  const decodedQueryString: Record<string, any> = Object.create(null);
   const processedString =
     path && path.includes('?') ? path.slice(path.indexOf('?') + 1) : '';
 
@@ -50,12 +50,15 @@ export const getQueryParams = (path: string) => {
     const entry = piece.match(/^([^=]+)(?:=([\s\S]*))?/);
     if (entry) {
       const key = decodeURIComponent(entry[1]);
+      if (key.includes('__proto__')) {
+        return;
+      }
       const value = decodeURIComponent(entry[2]);
       if (key.includes('.')) {
         const segments = key.split('.');
         const paramName = segments.pop();
         const nodeKey = segments.join('.');
-        decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || {};
+        decodedQueryString[nodeKey] = decodedQueryString[nodeKey] || Object.create(null);
         decodedQueryString[nodeKey][paramName] = value;
       }
       decodedQueryString[key] = value;
@@ -178,7 +181,7 @@ export const cleanFields = (
   keys: string[],
   paramsPool: Record<string, any>
 ) => {
-  const params: Record<string, any> = {};
+  const params: Record<string, any> = Object.create(null);
   while (keys.length) {
     const key = keys.shift();
     params[key] = paramsPool[key];

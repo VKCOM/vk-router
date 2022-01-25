@@ -205,7 +205,7 @@ const config = {
  // ...
 }
 
-const router = createNavigator(routes, config);
+const router = createNavigator(config, routes);
 
 // или 
 const routerListener = ({ toState }) => {
